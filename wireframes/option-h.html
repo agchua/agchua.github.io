@@ -286,14 +286,66 @@ document.getElementById('mail').href = 'mailto:' + ['agchua', 'wharton.upenn.edu
   const drawBake = (ctx, c) => draw(ctx, c, c.bake.canvas, c.bake.x0, c.bake.y0, c.bake.bw, c.bake.bh);
 
   /* ---------- nucleation ---------- */
-  function nucleate(x, y) { if (active.length < MAX_ACTIVE) active.push(makeGrain(x, y)); }
-  function randomSpot() {
-    const b = box.getBoundingClientRect();
-    for (let tries = 0; tries < 40; tries++) {
-      const x = Math.random() * VW, y = Math.random() * VH;
-      if (x < b.left - 20 || x > b.right + 20 || y < b.top - 20 || y > b.bottom + 20) return [x, y];
+  // automatic nuclei respect MAX_ACTIVE; a click always nucleates at once (up to two extra grains, and past
+  // that the oldest grain still growing is finished early to make room), so there's no cooldown on clicks
+  const CLICK_EXTRA = 2;
+  function nucleate(x, y, byClick) {
+    if (!byClick) { if (active.length < MAX_ACTIVE) active.push(makeGrain(x, y)); return; }
+    if (active.length >= MAX_ACTIVE + CLICK_EXTRA) {
+      const oldest = active.find(c => !c.bake);
+      if (oldest) startBake(oldest);
     }
-    return [Math.random() * VW, Math.random() * VH];          // box fills the screen (phones): anywhere
+    active.push(makeGrain(x, y));
+  }
+  /* ---------- where to nucleate next ----------
+     A coarse coverage map remembers when each patch of the page was last covered by a finished grain.
+     Each pick tries a couple of dozen random spots and keeps the one whose neighbourhood has been empty
+     longest (never covered beats covered long ago beats just covered), steering clear of grains that are
+     still growing. Still random, but gaps fill first instead of crystals piling onto each other. */
+  const CELL = 32, CANDIDATES = 24, LOOK = 2;          // cell size (css px), candidates per pick, neighbourhood radius (cells)
+  let covCols = 0, covRows = 0, covered = new Float64Array(0);   // time each cell was last covered (0 = never)
+  function resizeCoverage() {
+    const cols = Math.ceil(VW / CELL), rows = Math.ceil(VH / CELL), next = new Float64Array(cols * rows);
+    for (let r = 0; r < Math.min(rows, covRows); r++)
+      for (let q = 0; q < Math.min(cols, covCols); q++) next[r * cols + q] = covered[r * covCols + q];
+    covCols = cols; covRows = rows; covered = next;
+  }
+  function markCovered(c, t) {                          // cells whose centre lies on this grain's solid
+    const half = NG * c.S / 2, left = c.cx - half, top = c.cy - half;
+    const q0 = Math.max(0, Math.floor(left / CELL)), q1 = Math.min(covCols - 1, Math.floor((left + 2 * half) / CELL));
+    const r0 = Math.max(0, Math.floor(top / CELL)), r1 = Math.min(covRows - 1, Math.floor((top + 2 * half) / CELL));
+    for (let r = r0; r <= r1; r++) for (let q = q0; q <= q1; q++) {
+      const gx = Math.floor(((q + 0.5) * CELL - left) / c.S), gy = Math.floor(((r + 0.5) * CELL - top) / c.S);
+      if (gx >= 0 && gx < NG && gy >= 0 && gy < NG && c.p[gy * NG + gx] > 0.5) covered[r * covCols + q] = t;
+    }
+  }
+  function emptiness(x, y, now) {                       // higher = emptier for longer
+    const q = Math.floor(x / CELL), r = Math.floor(y / CELL);
+    let score = Infinity;
+    for (let dr = -LOOK; dr <= LOOK; dr++) for (let dq = -LOOK; dq <= LOOK; dq++) {
+      const rr = r + dr, qq = q + dq;
+      if (rr < 0 || qq < 0 || rr >= covRows || qq >= covCols) continue;
+      const t = covered[rr * covCols + qq], age = t ? now - t : 1e9;
+      if (age < score) score = age;
+    }
+    for (const c of active) {                           // a grain still growing counts as covering its reach right now
+      const reach = NG * c.S * 0.45, d = Math.hypot(c.cx - x, c.cy - y);
+      if (d < reach) score = Math.min(score, d / reach);
+    }
+    return score;
+  }
+  function randomSpot() {
+    const b = box.getBoundingClientRect(), now = performance.now();
+    const outside = (x, y) => x < b.left - 20 || x > b.right + 20 || y < b.top - 20 || y > b.bottom + 20;
+    let best = null, bestScore = -1, seen = 0;
+    for (let tries = 0; tries < 200 && seen < CANDIDATES; tries++) {
+      const x = Math.random() * VW, y = Math.random() * VH;
+      if (!outside(x, y) && tries < 150) continue;      // box fills the screen (phones): fall back to anywhere
+      seen++;
+      const score = emptiness(x, y, now) * (0.85 + 0.3 * Math.random());   // a little jitter keeps it organic
+      if (score > bestScore) { bestScore = score; best = [x, y]; }
+    }
+    return best || [Math.random() * VW, Math.random() * VH];
   }
 
   function resize() {
@@ -305,6 +357,7 @@ document.getElementById('mail').href = 'mailto:' + ['agchua', 'wharton.upenn.edu
     cv.width = base.width = Math.round(VW * dpr); cv.height = base.height = Math.round(VH * dpr);
     bg.fillStyle = '#fff'; bg.fillRect(0, 0, base.width, base.height);
     if (old.width && old.height) bg.drawImage(old, 0, 0);
+    resizeCoverage();
   }
 
   let tick = 0;
@@ -313,7 +366,7 @@ document.getElementById('mail').href = 'mailto:' + ['agchua', 'wharton.upenn.edu
     for (let n = active.length - 1; n >= 0; n--) {
       const c = active[n];
       if (c.bake) {                                           // finishing: a few rows of the full-res render per frame
-        if (continueBake(c)) { drawBake(bg, c); active.splice(n, 1); }
+        if (continueBake(c)) { drawBake(bg, c); markCovered(c, performance.now()); active.splice(n, 1); }
         continue;
       }
       for (let k = 0; k < STEPS; k++) step(c);
@@ -324,7 +377,7 @@ document.getElementById('mail').href = 'mailto:' + ['agchua', 'wharton.upenn.edu
     for (const c of active) drawLive(g, c);                   // growing grains sit on top, oldest first
   }
 
-  cv.addEventListener('pointerdown', e => { nucleate(e.clientX, e.clientY); });
+  cv.addEventListener('pointerdown', e => { nucleate(e.clientX, e.clientY, true); });
   let rt; addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(resize, 150); });
   resize();
 
@@ -332,7 +385,7 @@ document.getElementById('mail').href = 'mailto:' + ['agchua', 'wharton.upenn.edu
     for (let s = 0; s < 6; s++) {
       const c = makeGrain(...randomSpot());
       while (!reachedEdge(c) && c.time < 1.2) step(c);
-      startBake(c); while (!continueBake(c)); drawBake(bg, c);
+      startBake(c); while (!continueBake(c)); drawBake(bg, c); markCovered(c, performance.now());
     }
     g.drawImage(base, 0, 0);
     return;
