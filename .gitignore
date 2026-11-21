@@ -1,0 +1,4 @@
+tools/*.aux
+tools/*.log
+tools/*.out
+tools/resume.pdf

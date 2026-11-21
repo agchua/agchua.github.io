@@ -1,0 +1,99 @@
+% Web copy of the resume (no phone number). Compile from tools/: pdflatex resume.tex
+% then copy tools/resume.pdf to aaron_chua_resume.pdf at the repo root.
+\documentclass[10pt,letterpaper]{article}
+\usepackage[margin=0.5in,top=0.45in,bottom=0.45in]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{enumitem}
+\usepackage{titlesec}
+\usepackage[hidelinks]{hyperref}
+\hypersetup{pdftitle={Aaron Gabriel Chua -- Resume}, pdfauthor={Aaron Gabriel Chua}}
+
+\pagestyle{empty}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0pt}
+
+\titleformat{\section}{\large\bfseries}{}{0pt}{}[\vspace{-6pt}\rule{\textwidth}{0.4pt}]
+\titlespacing*{\section}{0pt}{9pt}{6pt}
+
+\setlist[itemize]{label={\textbullet}, leftmargin=10pt, labelsep=5pt, topsep=1pt, itemsep=0pt, parsep=0pt, partopsep=0pt}
+
+% \entry{Org}{role}{place}{dates}
+\newcommand{\entry}[4]{\textbf{#1} \,$|$\, \textit{#2} \hfill #3 \,$\cdot$\, \textit{#4}\par}
+\newcommand{\sep}{\unskip\ $\cdot$\ \ignorespaces}
+
+\begin{document}
+
+\begin{center}
+  {\LARGE\bfseries Aaron Gabriel Chua}\\[3pt]
+  {\small
+   \href{mailto:agchua@wharton.upenn.edu}{agchua@wharton.upenn.edu} \sep
+   \href{https://www.linkedin.com/in/aaron-gabriel-chua/}{linkedin.com/in/aaron-gabriel-chua}}
+\end{center}
+\vspace{-6pt}
+
+\section*{Education}
+\textbf{University of Pennsylvania} \,$|$\, Jerome Fisher Program in Management \& Technology (M\&T) \hfill Philadelphia, PA\par
+\textit{B.S.E. Materials Science \& Engineering; B.S. Economics (Wharton), OIDD concentration} \hfill \textit{Expected May 2030}\par
+\hangindent=1.4em\hangafter=1
+Clubs: Wharton Undergraduate Entrepreneurship Club, VP Fundraising \sep M\&T Innovation Fund\\
+Wharton Asia Exchange, Energy \& Industrials\par
+\vspace{4pt}
+\textbf{British School Manila} \,$|$\, IB Diploma 44/45 (HL Mathematics AA, Chemistry, Physics) \hfill Taguig, PHL\par
+\textit{SAT 1560 (790 Math) \sep Ranked \#2 in batch \sep Head of Academics \sep President, Maths Club} \hfill \textit{Jun 2026}\par
+
+\section*{Mathematics \& Awards}
+\begin{itemize}
+  \item \textbf{AIME Qualifier} (top 2.5\%) \sep \textbf{British Math Olympiad Qualifier} (top 1\%) \sep \textbf{UKMT Senior Challenge Gold}
+  \item \textbf{Singapore International Math Olympiad Challenge (SIMOC) Gold} (2024), invitation-only international final
+  \item \textbf{World Mathematics Competition}, \#1 in the Philippines \sep \textbf{DOST Youth Excellence in Science Award}
+  \item \textbf{HackHarvard 2026, Grand Prize Runner-Up}: gaze-controlled assistive robotic arm
+\end{itemize}
+
+\section*{Experience}
+\entry{Solid State Multi-Products Corporation}{Systems Engineer (Independent)}{Philippines}{Spring -- Summer 2026}
+\begin{itemize}
+  \item Built a Node.js + PostgreSQL platform replacing Excel inventory, invoicing, and receivables across tank farms holding 100M+ liters of solvents; deployed offline for island sites
+  \item Adapted existing solvent-pricing models and live commodity data to forecast methanol and toluene prices, benchmark market prices against landed costs, and inform traders' client negotiations
+  \item Ran letters of credit for solvent procurement; led corporate due diligence on affiliated entities
+\end{itemize}
+\vspace{3pt}
+\entry{Penn Electric Racing}{Driverless Team, Formula SAE}{Philadelphia, PA}{Sep 2026 -- Present}
+\begin{itemize}
+  \item Designing the mechanical actuation for the driverless car's autonomous emergency braking system (EBS)
+\end{itemize}
+\vspace{3pt}
+\entry{Team Agilas, F1 in Schools}{Co-Founder \& Manufacturing Director}{\href{https://teamagilas.com}{teamagilas.com}}{Oct 2023 -- Mar 2025}
+\begin{itemize}
+  \item First Philippine team to qualify for the World Finals; National \#1; Best Newcomer at the Qatar GP Finals (1 of 55 teams)
+  \item Designed, CNC-machined, and CFD-tested the car; fixed high-speed failures with nanotube-lined axles and PEEK wheels
+  \item Pitched and won \$80k in sponsorship (ASUS et al.); featured by Aston Martin, Aramco, Esquire, and ABS-CBN
+\end{itemize}
+\vspace{3pt}
+\entry{Pacific Paint (Boysen) Philippines}{Supplier Quality Engineering \& R\&D Intern}{Manila, PHL}{Jun -- Aug 2024}
+\begin{itemize}
+  \item Led testing of a self-crosslinking binder that eliminated ambering in low-VOC paint; built the cost-benefit case that won pilots with the three largest clients (2M gallons reformulated, $\sim$10 tons of VOCs removed)
+\end{itemize}
+\vspace{3pt}
+\entry{Metrobank}{Corporate Credit Analyst Intern}{Manila, PHL}{Jun -- Aug 2023}
+\begin{itemize}
+  \item Built 5-year financial models for 25 auto-microfinance loan applicants; presented findings to the Executive Committee
+\end{itemize}
+
+\section*{Leadership \& Ventures}
+\entry{Mana}{GTM Lead, Outsourcing \& Remote Work}{Manila, PHL}{Jul 2026 -- Present}
+\begin{itemize}
+  \item Led outsourcing-segment GTM for a USD-payout fintech; owned VA-agency, freelancer-platform, and BPO partnerships
+\end{itemize}
+\vspace{3pt}
+\entry{YIPEE}{Founder}{\href{https://yipee.org}{yipee.org}}{Jun 2024 -- Jul 2026}
+\begin{itemize}
+  \item Supported 650+ indigenous students; sold 3,000 artisan weaves, funding a \$30k computer lab built with the PH government; sole Philippine youth delegate to the 2025 UN STI Forum
+\end{itemize}
+
+\section*{Skills \& Interests}
+\textbf{Engineering:} CAD, Ansys CFD/FEA, CNC machining, Autodesk EAGLE\par
+\textbf{Languages:} English, Tagalog (native); Mandarin (advanced)\par
+\textbf{Interests:} Poker, fantasy basketball, golf, building vacuum-tube amps, restoring pre-war fountain pens, film photography, endurance motorsport, WWII history\par
+
+\end{document}
