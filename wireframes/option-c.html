@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Wireframe C · ASCII</title>
+<style>
+  :root { --ink:#111; --mute:#8a8a8a; --line:#d4d4d4; --ph:#ececec; --note:#2f6fdf; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:#fff; color:var(--ink);
+         font:14px/1.65 ui-monospace, SFMono-Regular, Menlo, Monaco, "Cascadia Mono", Consolas, monospace; }
+  main { max-width:620px; margin:48px auto 96px; padding:0 16px; }
+  h1 { font-size:14px; font-weight:700; margin:0 0 12px; }
+  hr { border:0; border-top:1px solid var(--line); margin:0 0 16px; }
+  p { margin:0 0 14px; }
+  ul { margin:0 0 18px; padding-left:22px; }
+  li { margin:2px 0; }
+  a { color:var(--ink); }
+  .ph { background:var(--ph); color:#555; padding:0 3px; }
+
+  .fig { margin:0 0 20px; }
+  #julia { margin:0; font-size:10px; line-height:10px; color:#4a4a4a; overflow:hidden;
+           white-space:pre; cursor:crosshair; user-select:none; }
+  .cap { display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap;
+         font-size:11px; color:var(--mute); margin-top:8px; }
+  #cval { font-variant-numeric:tabular-nums; }
+
+  .note { color:var(--note); font-size:11px; }
+  .note.block { display:block; margin:-8px 0 14px; }
+  .tag { position:fixed; top:12px; left:16px; }
+  #toggle { position:fixed; right:16px; bottom:16px; font:inherit; font-size:11px; background:#fff;
+            border:1px solid var(--note); color:var(--note); padding:4px 8px; cursor:pointer; }
+  body.hide-notes .note { display:none; }
+</style>
+</head>
+<body>
+<span class="note tag">WIREFRAME C — “ascii” (the figure is made of text)</span>
+
+<main>
+  <figure class="fig">
+    <pre id="julia" aria-hidden="true"></pre>
+    <figcaption class="cap"><span>fig. 1 — Julia set, z → z² + c</span><span id="cval"></span></figcaption>
+  </figure>
+  <span class="note block">↑ rendered entirely in monospace characters ( .:-=+*#%@ ), so it matches the type exactly. c slowly orbits the Mandelbrot set’s edge, so the set morphs between dust, spirals and rabbits. Moving the cursor left↔right over it scrubs c by hand.</span>
+
+  <h1><span class="ph">Your Name</span></h1>
+  <hr>
+  <p><span class="ph">one-line bio — school / what you're doing now / where you live.</span></p>
+
+  <p>Experience:</p>
+  <ul>
+    <li><b><span class="ph">Company</span>:</b> <span class="ph">Role</span> – <span class="ph">City</span></li>
+    <li><b><span class="ph">Company</span>:</b> <span class="ph">Role</span> – <span class="ph">City</span></li>
+    <li><b><span class="ph">Company</span>:</b> <span class="ph">Role</span> – <span class="ph">City</span></li>
+  </ul>
+
+  <p>Projects:</p>
+  <ul>
+    <li><a href="#"><span class="ph">project name</span></a> — <span class="ph">one line on what it does</span></li>
+    <li><a href="#"><span class="ph">project name</span></a> — <span class="ph">one line on what it does</span></li>
+  </ul>
+
+  <p>Contact:</p>
+  <p><a href="#">LinkedIn</a> / <a href="#">GitHub</a> / <span class="ph">you[at]domain[dot]com</span></p>
+</main>
+
+<button id="toggle">hide notes</button>
+
+<script>
+document.getElementById('toggle').onclick = e => {
+  const off = document.body.classList.toggle('hide-notes');
+  e.target.textContent = off ? 'show notes' : 'hide notes';
+};
+
+(function julia() {
+  const pre = document.getElementById('julia'), out = document.getElementById('cval');
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const RAMP = ' .:-=+*#%@', MAX = 48, ROWS = 26;
+  let cols, charW, charH, theta = 1.2, mouse = null;
+
+  function measure() {
+    const s = document.createElement('span'); s.textContent = 'M'.repeat(50);
+    pre.textContent = ''; pre.appendChild(s);
+    charW = s.getBoundingClientRect().width / 50;
+    charH = parseFloat(getComputedStyle(pre).lineHeight);
+    cols = Math.floor(pre.clientWidth / charW);
+  }
+
+  function render(cr, ci) {
+    const xr = 1.6, yr = xr * (ROWS * charH) / (cols * charW);
+    let s = '';
+    for (let r = 0; r < ROWS; r++) {
+      const y0 = yr - (2 * yr * (r + 0.5)) / ROWS;
+      for (let k = 0; k < cols; k++) {
+        let x = -xr + (2 * xr * (k + 0.5)) / cols, y = y0, n = 0;
+        while (n < MAX && x * x + y * y < 4) { const t = x * x - y * y + cr; y = 2 * x * y + ci; x = t; n++; }
+        s += n === MAX ? ' ' : RAMP[Math.min(RAMP.length - 1, Math.floor(Math.sqrt(Math.max(0, n - 2) / MAX) * RAMP.length * 1.15))];
+      }
+      s += '\n';
+    }
+    pre.textContent = s;
+    const sign = ci < 0 ? '−' : '+';
+    out.textContent = `c = ${cr.toFixed(3)} ${sign} ${Math.abs(ci).toFixed(3)}i`;
+  }
+
+  // c rides the circle |c| = 0.7885, which hugs the Mandelbrot boundary — every point on it gives an interesting set
+  function current() {
+    const r = 0.7885, a = mouse ?? theta;
+    return [r * Math.cos(a), r * Math.sin(a)];
+  }
+
+  pre.addEventListener('mousemove', e => {
+    const b = pre.getBoundingClientRect();
+    mouse = ((e.clientX - b.left) / b.width) * Math.PI * 2;   // cursor x scrubs the angle of c
+    if (reduced) render(...current());
+  });
+  pre.addEventListener('mouseleave', () => { if (mouse != null) theta = mouse; mouse = null; });
+  let rt; addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => { measure(); render(...current()); }, 150); });
+
+  measure();
+  render(...current());
+  if (reduced) return;
+  let last = 0;
+  (function loop(now) {
+    if (!document.hidden && now - last > 50) { if (!mouse) theta += 0.006; render(...current()); last = now; }
+    requestAnimationFrame(loop);
+  })(0);
+})();
+</script>
+</body>
+</html>

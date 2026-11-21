@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Wireframe B · Plate</title>
+<style>
+  :root { --ink:#111; --mute:#8a8a8a; --line:#d4d4d4; --ph:#ececec; --note:#2f6fdf; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:#fff; color:var(--ink);
+         font:14px/1.65 ui-monospace, SFMono-Regular, Menlo, Monaco, "Cascadia Mono", Consolas, monospace; }
+  main { max-width:960px; margin:72px auto 96px; padding:0 16px;
+         display:grid; grid-template-columns:minmax(0, 1fr) minmax(0, 1.1fr); gap:64px; align-items:start; }
+  h1 { font-size:14px; font-weight:700; margin:0 0 12px; }
+  hr { border:0; border-top:1px solid var(--line); margin:0 0 16px; }
+  p { margin:0 0 14px; }
+  ul { margin:0 0 18px; padding-left:22px; }
+  li { margin:2px 0; }
+  a { color:var(--ink); }
+  .ph { background:var(--ph); color:#555; padding:0 3px; }
+
+  figure { margin:0; position:sticky; top:72px; }
+  #dj { display:block; width:100%; aspect-ratio:1; cursor:pointer; }
+  .cap { display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap;
+         font-size:11px; color:var(--mute); margin-top:8px; border-top:1px solid var(--line); padding-top:6px; }
+  #params { font-variant-numeric:tabular-nums; }
+
+  .note { color:var(--note); font-size:11px; }
+  .note.block { display:block; margin:-8px 0 14px; }
+  .tag { position:fixed; top:12px; left:16px; }
+  #toggle { position:fixed; right:16px; bottom:16px; font:inherit; font-size:11px; background:#fff;
+            border:1px solid var(--note); color:var(--note); padding:4px 8px; cursor:pointer; }
+  body.hide-notes .note { display:none; }
+
+  @media (max-width: 760px) {
+    main { grid-template-columns:1fr; gap:28px; margin-top:48px; }
+    figure { position:static; order:-1; max-width:440px; }
+  }
+</style>
+</head>
+<body>
+<span class="note tag">WIREFRAME B — “plate” (text column + one live figure)</span>
+
+<main>
+  <section>
+    <h1><span class="ph">Your Name</span></h1>
+    <hr>
+    <p><span class="ph">one-line bio — school / what you're doing now / where you live.</span></p>
+
+    <p>Experience:</p>
+    <ul>
+      <li><b><span class="ph">Company</span>:</b> <span class="ph">Role</span> – <span class="ph">City</span></li>
+      <li><b><span class="ph">Company</span>:</b> <span class="ph">Role</span> – <span class="ph">City</span></li>
+      <li><b><span class="ph">Company</span>:</b> <span class="ph">Role</span> – <span class="ph">City</span></li>
+    </ul>
+
+    <p>Projects:</p>
+    <ul>
+      <li><a href="#"><span class="ph">project name</span></a> — <span class="ph">one line</span></li>
+      <li><a href="#"><span class="ph">project name</span></a> — <span class="ph">one line</span></li>
+    </ul>
+
+    <p>Contact:</p>
+    <p><a href="#">LinkedIn</a> / <a href="#">GitHub</a> / <span class="ph">you[at]domain[dot]com</span></p>
+    <span class="note block">↑ same plain monospace text as A, just moved into a left column</span>
+  </section>
+
+  <figure>
+    <canvas id="dj" title="click for a new attractor"></canvas>
+    <figcaption class="cap">
+      <span>fig. 1 — de Jong attractor</span>
+      <span id="params"></span>
+    </figcaption>
+    <span class="note block" style="margin-top:8px">↑ x′ = sin(a·y) − cos(b·x), y′ = sin(c·x) − cos(d·y). ~50k points/frame, density shaded in grey. Parameters drift slowly so the shape “breathes”; click morphs to a new preset. Sticky on scroll; stacks above the text on mobile.</span>
+  </figure>
+</main>
+
+<button id="toggle">hide notes</button>
+
+<script>
+document.getElementById('toggle').onclick = e => {
+  const off = document.body.classList.toggle('hide-notes');
+  e.target.textContent = off ? 'show notes' : 'hide notes';
+};
+
+(function attractor() {
+  const cv = document.getElementById('dj'), g = cv.getContext('2d');
+  const out = document.getElementById('params');
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const PRESETS = [
+    [-2.24, 0.43, -0.65, -2.43],
+    [1.641, 1.902, 0.316, 1.525],
+    [2.01, -2.53, 1.61, -0.33],
+    [-2.7, -0.09, -0.86, -2.2],
+    [-0.827, -1.637, 1.659, -0.943],
+    [1.4, -2.3, 2.4, -2.1],
+  ];
+  let pi = 0, base = PRESETS[0].slice(), target = PRESETS[0];
+  let N, dens, img, x = 0.1, y = 0.1, t = 0, frameNo = 0;
+
+  function size() {
+    N = Math.min(760, Math.round(cv.clientWidth * Math.min(devicePixelRatio || 1, 2)));
+    cv.width = cv.height = N;
+    dens = new Float32Array(N * N);
+    img = g.createImageData(N, N);
+  }
+
+  function params() {
+    return base.map((v, i) => v + 0.05 * Math.sin(t * (0.7 + 0.23 * i) + i * 1.7));
+  }
+
+  function plot(count, decay) {
+    if (decay < 1) for (let i = 0; i < dens.length; i++) dens[i] *= decay;
+    const [a, b, c, d] = params();
+    const s = N / 4.4, h = N / 2;
+    for (let i = 0; i < count; i++) {
+      const nx = Math.sin(a * y) - Math.cos(b * x);
+      const ny = Math.sin(c * x) - Math.cos(d * y);
+      x = nx; y = ny;
+      dens[((ny * s + h) | 0) * N + ((nx * s + h) | 0)] += 1;
+    }
+    return [a, b, c, d];
+  }
+
+  function shade(k) {
+    const D = img.data;
+    for (let i = 0, j = 0; i < dens.length; i++, j += 4) {
+      const v = 255 - 238 * (1 - Math.exp(-dens[i] * k));
+      D[j] = D[j + 1] = D[j + 2] = v; D[j + 3] = 255;
+    }
+    g.putImageData(img, 0, 0);
+  }
+
+  const fmt = p => 'a=' + p[0].toFixed(3) + ' b=' + p[1].toFixed(3) + ' c=' + p[2].toFixed(3) + ' d=' + p[3].toFixed(3);
+
+  cv.onclick = () => { pi = (pi + 1) % PRESETS.length; target = PRESETS[pi]; if (reduced) { base = target.slice(); still(); } };
+  let rt; addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => { size(); if (reduced) still(); }, 150); });
+
+  function still() {
+    dens.fill(0);
+    const p = plot(1500000, 1);
+    shade(0.5 * (N * N) / 1500000 * 3);
+    out.textContent = fmt(p);
+  }
+
+  size();
+  if (reduced) { still(); return; }
+
+  const PER = 50000, DECAY = 0.9;
+  (function loop() {
+    if (!document.hidden) {
+      t += 0.006;
+      for (let i = 0; i < 4; i++) base[i] += (target[i] - base[i]) * 0.02;   // ease toward clicked preset
+      const p = plot(PER, DECAY);
+      const steady = PER / (1 - DECAY);                                       // ~points on screen
+      shade(2.5 * (N * N) / steady);
+      if (++frameNo % 6 === 0) out.textContent = fmt(p);
+    }
+    requestAnimationFrame(loop);
+  })();
+})();
+</script>
+</body>
+</html>

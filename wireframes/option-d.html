@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Wireframe D · Field</title>
+<style>
+  :root { --ink:#111; --mute:#8a8a8a; --line:#d4d4d4; --ph:#ececec; --note:#2f6fdf; }
+  * { box-sizing: border-box; }
+  html, body { background:#fff; }
+  body { margin:0; color:var(--ink);
+         font:14px/1.65 ui-monospace, SFMono-Regular, Menlo, Monaco, "Cascadia Mono", Consolas, monospace; }
+  #field { position:fixed; inset:0; width:100vw; height:100vh; z-index:0; cursor:pointer; }
+  main { position:relative; z-index:1; max-width:620px; margin:72px auto 120px; padding:28px 32px;
+         background:rgba(255,255,255,.92); }
+  @media (max-width: 680px) { main { margin:56px 16px 120px; padding:20px; } }
+  h1 { font-size:14px; font-weight:700; margin:0 0 12px; }
+  hr { border:0; border-top:1px solid var(--line); margin:0 0 16px; }
+  p { margin:0 0 14px; }
+  ul { margin:0 0 18px; padding-left:22px; }
+  li { margin:2px 0; }
+  a { color:var(--ink); }
+  .ph { background:var(--ph); color:#555; padding:0 3px; }
+
+  .cap { position:fixed; left:16px; bottom:14px; z-index:1; font-size:11px; color:var(--mute);
+         background:rgba(255,255,255,.85); padding:2px 4px; pointer-events:none; }
+
+  .note { color:var(--note); font-size:11px; }
+  .note.block { display:block; margin:-8px 0 14px; }
+  .tag { position:fixed; top:12px; left:16px; z-index:2; background:rgba(255,255,255,.85); }
+  #toggle { position:fixed; right:16px; bottom:16px; z-index:2; font:inherit; font-size:11px; background:#fff;
+            border:1px solid var(--note); color:var(--note); padding:4px 8px; cursor:pointer; }
+  body.hide-notes .note { display:none; }
+</style>
+</head>
+<body>
+<canvas id="field" aria-hidden="true"></canvas>
+<span class="note tag">WIREFRAME D — “field” (the whole page is the figure)</span>
+
+<main>
+  <h1><span class="ph">Your Name</span></h1>
+  <hr>
+  <p><span class="ph">one-line bio — school / what you're doing now / where you live.</span></p>
+  <span class="note block">↑ the text sits on a near-white sheet; the moving field only shows clearly in the margins, so it never fights readability. Phone: the field peeks around the edges.</span>
+
+  <p>Experience:</p>
+  <ul>
+    <li><b><span class="ph">Company</span>:</b> <span class="ph">Role</span> – <span class="ph">City</span></li>
+    <li><b><span class="ph">Company</span>:</b> <span class="ph">Role</span> – <span class="ph">City</span></li>
+    <li><b><span class="ph">Company</span>:</b> <span class="ph">Role</span> – <span class="ph">City</span></li>
+  </ul>
+
+  <p>Projects:</p>
+  <ul>
+    <li><a href="#"><span class="ph">project name</span></a> — <span class="ph">one line on what it does</span></li>
+    <li><a href="#"><span class="ph">project name</span></a> — <span class="ph">one line on what it does</span></li>
+  </ul>
+
+  <p>Contact:</p>
+  <p><a href="#">LinkedIn</a> / <a href="#">GitHub</a> / <span class="ph">you[at]domain[dot]com</span></p>
+  <span class="note block">↑ background: ~1,200 particles following the pendulum’s phase space (x = angle θ, y = speed ω). Closed “eyes” = swinging back and forth; the wavy lanes above and below = spinning all the way round. Click anywhere off the text to add friction — every path then spirals into the resting points.</span>
+</main>
+
+<div class="cap" id="cap">fig. — phase portrait of a pendulum, θ̈ = −sin θ</div>
+<button id="toggle">hide notes</button>
+
+<script>
+document.getElementById('toggle').onclick = e => {
+  const off = document.body.classList.toggle('hide-notes');
+  e.target.textContent = off ? 'show notes' : 'hide notes';
+};
+
+(function field() {
+  const cv = document.getElementById('field'), g = cv.getContext('2d');
+  const cap = document.getElementById('cap');
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const TAU = Math.PI * 2, COUNT = 1200, DT = 0.03, LIFE = 260;
+  let W, H, ps = [], friction = 0;
+
+  function resize() {
+    const dpr = Math.min(devicePixelRatio || 1, 2);
+    W = innerWidth; H = innerHeight;
+    cv.width = W * dpr; cv.height = H * dpr;
+    g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    g.fillStyle = '#fff'; g.fillRect(0, 0, W, H);
+  }
+  const sx = th => ((th + TAU) / (2 * TAU)) * W;          // θ ∈ [−2π, 2π] across the width
+  const sy = w  => H / 2 - w * (H / 7.5);                  // ω ∈ ~[−3.75, 3.75] up the height
+  function spawn(p) {
+    p.t = (Math.random() * 2 - 1) * TAU;
+    p.w = (Math.random() * 2 - 1) * 3.6;
+    p.age = Math.random() * LIFE | 0;
+    return p;
+  }
+  for (let i = 0; i < COUNT; i++) ps.push(spawn({}));
+
+  function step() {
+    g.fillStyle = 'rgba(255,255,255,0.045)'; g.fillRect(0, 0, W, H);
+    g.strokeStyle = 'rgba(17,17,17,0.38)'; g.lineWidth = 1;
+    g.beginPath();
+    for (const p of ps) {
+      const x0 = sx(p.t), y0 = sy(p.w);
+      // semi-implicit Euler keeps the orbits closed when friction is 0
+      p.w += (-Math.sin(p.t) - friction * p.w) * DT;
+      p.t += p.w * DT;
+      let wrapped = false;
+      if (p.t > TAU) { p.t -= 2 * TAU; wrapped = true; }
+      if (p.t < -TAU) { p.t += 2 * TAU; wrapped = true; }
+      if (!wrapped) { g.moveTo(x0, y0); g.lineTo(sx(p.t), sy(p.w)); }
+      if (++p.age > LIFE) spawn(p);
+    }
+    g.stroke();
+  }
+
+  cv.addEventListener('click', () => {
+    friction = friction ? 0 : 0.25;
+    cap.textContent = friction
+      ? 'fig. — damped pendulum, θ̈ = −sin θ − 0.25 θ̇   (click to remove friction)'
+      : 'fig. — phase portrait of a pendulum, θ̈ = −sin θ';
+  });
+  let rt; addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(resize, 150); });
+  resize();
+
+  if (reduced) { for (let i = 0; i < 400; i++) step(); return; }
+  for (let i = 0; i < 60; i++) step();   // start with trails already visible
+  (function loop() {
+    if (!document.hidden) step();
+    requestAnimationFrame(loop);
+  })();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Wireframe F · Melt</title>
+<style>
+  :root { --ink:#111; --mute:#8a8a8a; --line:#d4d4d4; --ph:#ececec; --note:#2f6fdf; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:#fff; color:var(--ink);
+         font:14px/1.65 ui-monospace, SFMono-Regular, Menlo, Monaco, "Cascadia Mono", Consolas, monospace; }
+  main { max-width:960px; margin:72px auto 96px; padding:0 16px;
+         display:grid; grid-template-columns:minmax(0, 1fr) minmax(0, 1.1fr); gap:64px; align-items:start; }
+  h1 { font-size:14px; font-weight:700; margin:0 0 12px; }
+  hr { border:0; border-top:1px solid var(--line); margin:0 0 16px; }
+  p { margin:0 0 14px; }
+  ul { margin:0 0 18px; padding-left:22px; }
+  li { margin:2px 0; }
+  a { color:var(--ink); }
+  .ph { background:var(--ph); color:#555; padding:0 3px; }
+
+  figure { margin:0; position:sticky; top:72px; }
+  #md { display:block; width:100%; aspect-ratio:1; border:1px solid var(--line); }
+  .cap { display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap;
+         font-size:11px; color:var(--mute); margin-top:8px; }
+  #stats { font-variant-numeric:tabular-nums; }
+  .ctl { display:flex; align-items:center; gap:10px; font-size:11px; color:var(--mute); margin-top:6px; }
+  .ctl input { flex:1; accent-color:var(--ink); }
+  .legend { display:flex; gap:14px; font-size:11px; color:var(--mute); margin-top:4px; }
+  .legend b { display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:5px; vertical-align:middle; }
+
+  .note { color:var(--note); font-size:11px; }
+  .note.block { display:block; margin:-8px 0 14px; }
+  .tag { position:fixed; top:12px; left:16px; }
+  #toggle { position:fixed; right:16px; bottom:16px; font:inherit; font-size:11px; background:#fff;
+            border:1px solid var(--note); color:var(--note); padding:4px 8px; cursor:pointer; }
+  body.hide-notes .note { display:none; }
+
+  @media (max-width: 760px) {
+    main { grid-template-columns:1fr; gap:28px; margin-top:48px; }
+    figure { position:static; order:-1; max-width:440px; }
+  }
+</style>
+</head>
+<body>
+<span class="note tag">WIREFRAME F — “melt” (comp. materials science)</span>
+
+<main>
+  <section>
+    <h1><span class="ph">Your Name</span></h1>
+    <hr>
+    <p><span class="ph">one-line bio — school / what you're doing now / where you live.</span></p>
+
+    <p>Experience:</p>
+    <ul>
+      <li><b><span class="ph">Company / Lab</span>:</b> <span class="ph">Role</span> – <span class="ph">City</span></li>
+      <li><b><span class="ph">Company / Lab</span>:</b> <span class="ph">Role</span> – <span class="ph">City</span></li>
+      <li><b><span class="ph">Company / Lab</span>:</b> <span class="ph">Role</span> – <span class="ph">City</span></li>
+    </ul>
+
+    <p>Research:</p>
+    <ul>
+      <li><a href="#"><span class="ph">paper / project</span></a> — <span class="ph">one line</span></li>
+      <li><a href="#"><span class="ph">paper / project</span></a> — <span class="ph">one line</span></li>
+    </ul>
+
+    <p>Contact:</p>
+    <p><a href="#">LinkedIn</a> / <a href="#">GitHub</a> / <a href="#">Scholar</a> / <span class="ph">you[at]domain[dot]com</span></p>
+  </section>
+
+  <figure>
+    <canvas id="md"></canvas>
+    <div class="ctl"><span>cold</span><input id="temp" type="range" min="0.05" max="1.4" step="0.01" value="0.25" aria-label="temperature"><span>hot</span></div>
+    <figcaption class="cap"><span>fig. 1 — Lennard-Jones molecular dynamics, 2D</span><span id="stats"></span></figcaption>
+    <div class="legend"><span><b style="background:#111"></b>6 neighbours (crystal)</span><span><b style="background:#8a8a8a"></b>5 or 7 (defect)</span><span><b style="background:#d0d0d0"></b>other (liquid)</span></div>
+    <span class="note block" style="margin-top:10px">↑ 196 Lennard-Jones atoms. Slide past T* ≈ 0.7 to melt; slide back to refreeze.</span>
+  </figure>
+</main>
+
+<button id="toggle">hide notes</button>
+
+<script>
+document.getElementById('toggle').onclick = e => {
+  const off = document.body.classList.toggle('hide-notes');
+  e.target.textContent = off ? 'show notes' : 'hide notes';
+};
+
+(function md() {
+  const cv = document.getElementById('md'), g = cv.getContext('2d');
+  const slider = document.getElementById('temp'), stats = document.getElementById('stats');
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const SIDE = 14, N = SIDE * SIDE, RHO = 0.82, L = Math.sqrt(N / RHO);
+  const RC = 2.5, RC2 = RC * RC, NB2 = 1.4 * 1.4, DT = 0.004, SUB = 10, TAU = 0.4;
+  const x = new Float64Array(N), y = new Float64Array(N), vx = new Float64Array(N), vy = new Float64Array(N);
+  const fx = new Float64Array(N), fy = new Float64Array(N), nb = new Uint8Array(N);
+  let T0 = +slider.value, Tnow = T0;
+
+  // start on a slightly jittered square grid (deliberately *not* hexagonal — it has to find the crystal itself)
+  const a = L / SIDE;
+  for (let i = 0; i < N; i++) {
+    x[i] = (i % SIDE + 0.5) * a + (Math.random() - 0.5) * 0.1;
+    y[i] = ((i / SIDE | 0) + 0.5) * a + (Math.random() - 0.5) * 0.1;
+    vx[i] = (Math.random() - 0.5) * 2; vy[i] = (Math.random() - 0.5) * 2;
+  }
+
+  const wrapD = d => d - L * Math.round(d / L);
+  function forces(countNeighbours) {
+    fx.fill(0); fy.fill(0); if (countNeighbours) nb.fill(0);
+    for (let i = 0; i < N; i++) for (let j = i + 1; j < N; j++) {
+      const dx = wrapD(x[i] - x[j]), dy = wrapD(y[i] - y[j]), r2 = dx * dx + dy * dy;
+      if (r2 > RC2) continue;
+      if (countNeighbours && r2 < NB2) { nb[i]++; nb[j]++; }
+      const ir2 = 1 / Math.max(r2, 0.64), ir6 = ir2 * ir2 * ir2;
+      const f = 24 * ir2 * ir6 * (2 * ir6 - 1);
+      fx[i] += f * dx; fy[i] += f * dy; fx[j] -= f * dx; fy[j] -= f * dy;
+    }
+  }
+
+  function advance(n) {
+    for (let s = 0; s < n; s++) {
+      for (let i = 0; i < N; i++) {
+        vx[i] += 0.5 * DT * fx[i]; vy[i] += 0.5 * DT * fy[i];
+        x[i] = (x[i] + DT * vx[i] + L) % L; y[i] = (y[i] + DT * vy[i] + L) % L;
+      }
+      forces(s === n - 1);
+      let ke = 0;
+      for (let i = 0; i < N; i++) {
+        vx[i] += 0.5 * DT * fx[i]; vy[i] += 0.5 * DT * fy[i];
+        ke += vx[i] * vx[i] + vy[i] * vy[i];
+      }
+      Tnow = ke / (2 * N);                                            // 2D: kT = <v²>/2
+      const lam = Math.sqrt(Math.max(0.5, Math.min(1.5, 1 + (DT / TAU) * (T0 / Math.max(Tnow, 1e-6) - 1))));
+      for (let i = 0; i < N; i++) { vx[i] *= lam; vy[i] *= lam; }     // Berendsen thermostat
+    }
+  }
+
+  let S;
+  function resize() {
+    const dpr = Math.min(devicePixelRatio || 1, 2), css = cv.clientWidth;
+    cv.width = cv.height = Math.round(css * dpr);
+    S = cv.width / L;
+  }
+  function draw() {
+    g.fillStyle = '#fff'; g.fillRect(0, 0, cv.width, cv.height);
+    const r = 0.3 * S;
+    let crystal = 0;
+    for (let i = 0; i < N; i++) {
+      const k = nb[i];
+      if (k === 6) crystal++;
+      g.fillStyle = k === 6 ? '#111' : (k === 5 || k === 7) ? '#8a8a8a' : '#d0d0d0';
+      // draw periodic images near the edges so atoms don't get chopped
+      for (const ox of [0, x[i] < 1 ? L : x[i] > L - 1 ? -L : null]) {
+        if (ox === null) continue;
+        for (const oy of [0, y[i] < 1 ? L : y[i] > L - 1 ? -L : null]) {
+          if (oy === null) continue;
+          g.beginPath(); g.arc((x[i] + ox) * S, (y[i] + oy) * S, r, 0, Math.PI * 2); g.fill();
+        }
+      }
+    }
+    stats.textContent = `T* = ${Tnow.toFixed(2)} · 6-fold ${Math.round(100 * crystal / N)}%`;
+  }
+
+  slider.oninput = () => { T0 = +slider.value; };
+  let rt; addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => { resize(); draw(); }, 150); });
+
+  resize();
+  forces(true);
+  advance(1500);           // let it freeze a bit before first paint
+  draw();
+  if (reduced) { advance(6000); draw(); return; }
+  (function loop() {
+    if (!document.hidden) { advance(SUB); draw(); }
+    requestAnimationFrame(loop);
+  })();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Wireframe A · Notebook</title>
+<style>
+  :root { --ink:#111; --mute:#8a8a8a; --line:#d4d4d4; --ph:#ececec; --note:#2f6fdf; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:#fff; color:var(--ink);
+         font:14px/1.65 ui-monospace, SFMono-Regular, Menlo, Monaco, "Cascadia Mono", Consolas, monospace; }
+  main { max-width:620px; margin:56px auto 96px; padding:0 16px; }
+  h1 { font-size:14px; font-weight:700; margin:0 0 12px; }
+  p { margin:0 0 14px; }
+  ul { margin:0 0 18px; padding-left:22px; }
+  li { margin:2px 0; }
+  a { color:var(--ink); }
+  .ph { background:var(--ph); color:#555; padding:0 3px; }
+
+  /* the math figure — doubles as the header rule */
+  .fig { margin:0 0 22px; }
+  #ca { display:block; image-rendering:pixelated; cursor:pointer; }
+  .cap { display:flex; justify-content:space-between; gap:12px; font-size:11px; color:var(--mute); margin-top:6px; }
+
+  /* wireframe annotations */
+  .note { color:var(--note); font-size:11px; }
+  .note.block { display:block; margin:-8px 0 14px; }
+  .tag { position:fixed; top:12px; left:16px; }
+  #toggle { position:fixed; right:16px; bottom:16px; font:inherit; font-size:11px; background:#fff;
+            border:1px solid var(--note); color:var(--note); padding:4px 8px; cursor:pointer; }
+  body.hide-notes .note { display:none; }
+</style>
+</head>
+<body>
+<span class="note tag">WIREFRAME A — “notebook” (closest to lakewyatt.com)</span>
+
+<main>
+  <h1><span class="ph">Your Name</span></h1>
+
+  <figure class="fig">
+    <canvas id="ca" title="click to change rule"></canvas>
+    <figcaption class="cap"><span id="ca-label">fig. 1 — rule 30, elementary cellular automaton</span><span>click ↻</span></figcaption>
+  </figure>
+  <span class="note block">↑ replaces the plain &lt;hr&gt;: a 1-px-per-cell strip that keeps computing new generations and scrolls up. Click cycles rules 30 → 90 (Sierpiński) → 110 → 184 → 45.</span>
+
+  <p><span class="ph">one-line bio — school / what you're doing now / where you live.</span></p>
+  <span class="note block">↑ all text “decodes” from random glyphs on load (same trick as the reference site)</span>
+
+  <p>Experience:</p>
+  <ul>
+    <li><b><span class="ph">Company</span>:</b> <span class="ph">Role</span> – <span class="ph">City</span></li>
+    <li><b><span class="ph">Company</span>:</b> <span class="ph">Role</span> – <span class="ph">City</span></li>
+    <li><b><span class="ph">Company</span>:</b> <span class="ph">Role</span> – <span class="ph">City</span></li>
+  </ul>
+
+  <p>Projects:</p>
+  <ul>
+    <li><a href="#"><span class="ph">project name</span></a> — <span class="ph">one line on what it does</span></li>
+    <li><a href="#"><span class="ph">project name</span></a> — <span class="ph">one line on what it does</span></li>
+  </ul>
+  <span class="note block">↑ optional section; drop it to stay as bare as the reference</span>
+
+  <p>Contact:</p>
+  <p><a href="#">LinkedIn</a> / <a href="#">GitHub</a> / <span class="ph">you[at]domain[dot]com</span></p>
+</main>
+
+<button id="toggle">hide notes</button>
+
+<script>
+/* ---------- notes toggle ---------- */
+document.getElementById('toggle').onclick = e => {
+  const off = document.body.classList.toggle('hide-notes');
+  e.target.textContent = off ? 'show notes' : 'hide notes';
+};
+
+const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/* ---------- text decode on load ---------- */
+(function scramble() {
+  if (reduced) return;
+  const glyphs = '!<>-_\\/[]{}=+*^?#%&$@abcdefghijklmnopqrstuvwxyz0123456789';
+  const walk = document.createTreeWalker(document.querySelector('main'), NodeFilter.SHOW_TEXT, {
+    acceptNode: n => n.nodeValue.trim() && !n.parentElement.closest('.note,.cap')
+      ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT
+  });
+  const nodes = []; let total = 0;
+  while (walk.nextNode()) {
+    const n = walk.currentNode;
+    nodes.push({ n, orig: n.nodeValue, start: total });
+    total += n.nodeValue.length;
+  }
+  const dur = 1100, t0 = performance.now();
+  (function frame(now) {
+    const cut = Math.min(1, (now - t0) / dur) * total;
+    for (const o of nodes) {
+      let s = '';
+      for (let i = 0; i < o.orig.length; i++) {
+        const c = o.orig[i];
+        s += (/\s/.test(c) || o.start + i < cut) ? c : glyphs[Math.random() * glyphs.length | 0];
+      }
+      o.n.nodeValue = s;
+    }
+    if (cut < total) requestAnimationFrame(frame);
+  })(t0);
+})();
+
+/* ---------- elementary cellular automaton strip ---------- */
+(function automaton() {
+  const cv = document.getElementById('ca'), cx = cv.getContext('2d');
+  const label = document.getElementById('ca-label');
+  const RULES = [30, 90, 110, 184, 45];
+  const CELL = 3, ROWS = 16;
+  let ri = 0, cols, grid, img;
+
+  function reset() {
+    cols = Math.floor(cv.parentElement.clientWidth / CELL);
+    cv.width = cols; cv.height = ROWS;
+    cv.style.width = cols * CELL + 'px'; cv.style.height = ROWS * CELL + 'px';
+    const first = new Uint8Array(cols);
+    if (RULES[ri] === 184) for (let i = 0; i < cols; i++) first[i] = Math.random() < 0.45 ? 1 : 0;
+    else first[cols >> 1] = 1;
+    grid = [first];
+    img = cx.createImageData(cols, ROWS);
+    for (let i = 0; i < (cols >> 1); i++) step();   // start with the pattern already spanning the width
+    label.textContent = `fig. 1 — rule ${RULES[ri]}, elementary cellular automaton`;
+    draw();
+  }
+  function step() {
+    const rule = RULES[ri], p = grid[grid.length - 1], n = new Uint8Array(cols);
+    for (let i = 0; i < cols; i++) {
+      const l = p[(i - 1 + cols) % cols], c = p[i], r = p[(i + 1) % cols];
+      n[i] = (rule >> (l << 2 | c << 1 | r)) & 1;
+    }
+    grid.push(n);
+    if (grid.length > ROWS) grid.shift();
+  }
+  function draw() {
+    const d = img.data; d.fill(255);
+    for (let y = 0; y < grid.length; y++)
+      for (let x = 0; x < cols; x++)
+        if (grid[y][x]) { const k = (y * cols + x) * 4; d[k] = d[k + 1] = d[k + 2] = 17; }
+    cx.putImageData(img, 0, 0);
+  }
+
+  cv.onclick = () => { ri = (ri + 1) % RULES.length; reset(); };
+  let rt; addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(reset, 150); });
+  reset();
+
+  if (reduced) { for (let i = 0; i < ROWS - 1; i++) step(); draw(); return; }
+  let last = 0;
+  (function loop(now) {
+    if (!document.hidden && now - last > 90) { step(); draw(); last = now; }
+    requestAnimationFrame(loop);
+  })(0);
+})();
+</script>
+</body>
+</html>

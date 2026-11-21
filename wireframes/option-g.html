@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Wireframe G · Dendrites</title>
+<style>
+  :root { --ink:#111; --mute:#8a8a8a; --line:#d4d4d4; --ph:#ececec; --note:#2f6fdf; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:#fff; color:var(--ink);
+         font:14px/1.65 ui-monospace, SFMono-Regular, Menlo, Monaco, "Cascadia Mono", Consolas, monospace; }
+  main { max-width:900px; margin:72px auto 96px; padding:0 16px;
+         display:grid; grid-template-columns:minmax(0, 1fr) minmax(0, 400px); gap:64px; align-items:start; }
+  h1 { font-size:14px; font-weight:700; margin:0 0 12px; }
+  hr { border:0; border-top:1px solid var(--line); margin:0 0 16px; }
+  p { margin:0 0 14px; }
+  ul { margin:0 0 18px; padding-left:22px; }
+  li { margin:2px 0; }
+  a { color:var(--ink); }
+  .ph { background:var(--ph); color:#555; padding:0 3px; }
+
+  figure { margin:0; position:sticky; top:72px; }
+  .plate { position:relative; }
+  #dn { display:block; width:100%; aspect-ratio:3 / 4; cursor:pointer; }
+  .lbl { position:absolute; left:8px; font-size:10px; background:#fff; padding:0 4px; color:var(--mute); }
+  .lbl.top { top:6px; } .lbl.bot { bottom:6px; }
+  .scale { position:absolute; right:8px; bottom:6px; background:#fff; padding:2px 6px; font-size:10px;
+           display:flex; align-items:center; gap:6px; }
+  .scale i { display:block; width:40px; height:3px; background:var(--ink); }
+  .cap { display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap;
+         font-size:11px; color:var(--mute); margin-top:8px; border-top:1px solid var(--line); padding-top:6px; }
+  #tval { font-variant-numeric:tabular-nums; }
+
+  .note { color:var(--note); font-size:11px; }
+  .note.block { display:block; margin:-8px 0 14px; }
+  .tag { position:fixed; top:12px; left:16px; }
+  #toggle { position:fixed; right:16px; bottom:16px; font:inherit; font-size:11px; background:#fff;
+            border:1px solid var(--note); color:var(--note); padding:4px 8px; cursor:pointer; }
+  body.hide-notes .note { display:none; }
+
+  @media (max-width: 760px) {
+    main { grid-template-columns:1fr; gap:28px; margin-top:48px; }
+    figure { position:static; order:-1; max-width:340px; }
+  }
+</style>
+</head>
+<body>
+<span class="note tag">WIREFRAME G — “dendrites” (Czochralski growth front, close-up)</span>
+
+<main>
+  <section>
+    <h1><span class="ph">Your Name</span></h1>
+    <hr>
+    <p><span class="ph">one-line bio — school / what you're doing now / where you live.</span></p>
+
+    <p>Experience:</p>
+    <ul>
+      <li><b><span class="ph">Company / Lab</span>:</b> <span class="ph">Role</span> – <span class="ph">City</span></li>
+      <li><b><span class="ph">Company / Lab</span>:</b> <span class="ph">Role</span> – <span class="ph">City</span></li>
+      <li><b><span class="ph">Company / Lab</span>:</b> <span class="ph">Role</span> – <span class="ph">City</span></li>
+    </ul>
+
+    <p>Research:</p>
+    <ul>
+      <li><a href="#"><span class="ph">paper / project</span></a> — <span class="ph">one line</span></li>
+      <li><a href="#"><span class="ph">paper / project</span></a> — <span class="ph">one line</span></li>
+    </ul>
+
+    <p>Contact:</p>
+    <p><a href="#">LinkedIn</a> / <a href="#">GitHub</a> / <a href="#">Scholar</a> / <span class="ph">you[at]domain[dot]com</span></p>
+  </section>
+
+  <figure>
+    <div class="plate">
+      <canvas id="dn" title="click to restart"></canvas>
+      <span class="lbl top">crystal ↑ pull</span>
+      <span class="lbl bot">melt</span>
+      <div class="scale"><i></i><span>10 µm</span></div>
+    </div>
+    <figcaption class="cap"><span>fig. 1 — dendrites at the growth front</span><span id="tval"></span></figcaption>
+    <span class="note block" style="margin-top:8px">↑ phase-field (Kobayashi) close-up of the crystal–melt interface. Click to restart.</span>
+  </figure>
+</main>
+
+<button id="toggle">hide notes</button>
+
+<script>
+document.getElementById('toggle').onclick = e => {
+  const off = document.body.classList.toggle('hide-notes');
+  e.target.textContent = off ? 'show notes' : 'hide notes';
+};
+
+/*
+  Kobayashi (1993) anisotropic phase-field model of solidification.
+    p : phase (1 = crystal, 0 = melt)     T : dimensionless temperature (0 = undercooled melt)
+    τ ∂p/∂t = ∇·(ε²∇p) − ∂x(εε′ ∂y p) + ∂y(εε′ ∂x p) + p(1−p)(p − ½ + m(T)) + noise
+    ∂T/∂t   = ∇²T + K ∂p/∂t                    (latent heat released at the front)
+    ε(θ) = ε̄(1 + δ cos 4θ)  → 4-fold (cubic) anisotropy, so arms grow along ⟨100⟩
+  Setup is directional: crystal face on top with a few protruding tips, undercooled melt below.
+  When the tips get deep, everything shifts up (the crystal is pulled) and fresh melt enters below.
+*/
+(function dendrites() {
+  const cv = document.getElementById('dn'), g = cv.getContext('2d');
+  const tval = document.getElementById('tval');
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  const W = 180, H = 240, N = W * H;
+  const DX = 0.03, DT = 1e-4, TAU = 3e-4, EB = 0.01, DELTA = 0.05, K = 1.6;
+  const ALPHA = 0.9, GAMMA = 10, TEQ = 1, NOISE = 0.04, STEPS = 10, SHIFT = 2;
+  const i2dx = 1 / (2 * DX), idx2 = 1 / (DX * DX);
+
+  let p = new Float32Array(N), T = new Float32Array(N);
+  const ax = new Float32Array(N), ay = new Float32Array(N), e2 = new Float32Array(N);
+  const dp = new Float32Array(N);
+  let Tn = new Float32Array(N);
+  const img = g.createImageData(W, H);
+  cv.width = W; cv.height = H;
+  let time = 0;
+
+  function reset() {
+    p.fill(0); T.fill(0); time = 0;
+    // flat crystal face + a few protruding tips; the tips outrun the face and branch into dendrites
+    for (let x = 0; x < W; x++) for (let y = 0; y < 6; y++) p[y * W + x] = 1;
+    const tips = 2, off = Math.random() * W;
+    for (let k = 0; k < tips; k++) {
+      const cx = Math.round(off + (k + 0.5) * W / tips + (Math.random() - 0.5) * 12) % W, len = 10 + (Math.random() * 6 | 0);
+      for (let y = 6; y < 6 + len; y++) for (let dx = -2; dx <= 2; dx++) p[y * W + (cx + dx + W) % W] = 1;
+    }
+  }
+
+  // periodic in x, clamped (zero-flux) in y
+  const L = x => (x === 0 ? W - 1 : x - 1), R = x => (x === W - 1 ? 0 : x + 1);
+
+  function step() {
+    // pass 1: anisotropy terms from ∇p
+    for (let y = 0; y < H; y++) {
+      const yu = y === 0 ? 0 : y - 1, yd = y === H - 1 ? H - 1 : y + 1;
+      for (let x = 0; x < W; x++) {
+        const i = y * W + x;
+        const gx = (p[y * W + R(x)] - p[y * W + L(x)]) * i2dx;
+        const gy = (p[yd * W + x] - p[yu * W + x]) * i2dx;
+        const r2 = gx * gx + gy * gy;
+        let c4 = 1, s4 = 0;
+        if (r2 > 1e-10) {
+          const gx2 = gx * gx, gy2 = gy * gy, r4 = r2 * r2;
+          c4 = (gx2 * gx2 - 6 * gx2 * gy2 + gy2 * gy2) / r4;     // cos 4θ
+          s4 = (4 * gx * gy * (gx2 - gy2)) / r4;                  // sin 4θ
+        }
+        const eps = EB * (1 + DELTA * c4), epsd = -EB * 4 * DELTA * s4;
+        ax[i] = eps * epsd * gx;
+        ay[i] = -eps * epsd * gy;
+        e2[i] = eps * eps;
+      }
+    }
+    // pass 2: dp/dt and new temperature
+    for (let y = 0; y < H; y++) {
+      const yu = y === 0 ? 0 : y - 1, yd = y === H - 1 ? H - 1 : y + 1;
+      for (let x = 0; x < W; x++) {
+        const i = y * W + x, l = y * W + L(x), r = y * W + R(x), u = yu * W + x, d = yd * W + x;
+        const pi = p[i];
+        const lapP = (p[l] + p[r] + p[u] + p[d] - 4 * pi) * idx2;
+        const lapT = (T[l] + T[r] + T[u] + T[d] - 4 * T[i]) * idx2;
+        const m = (ALPHA / Math.PI) * Math.atan(GAMMA * (TEQ - T[i]));
+        const reac = pi * (1 - pi) * (pi - 0.5 + m + NOISE * (Math.random() - 0.5));
+        const v = ((ay[r] - ay[l]) * i2dx + (ax[d] - ax[u]) * i2dx + e2[i] * lapP + reac) / TAU;
+        dp[i] = v;
+        Tn[i] = T[i] + DT * lapT + K * DT * v;
+      }
+    }
+    for (let i = 0; i < N; i++) p[i] += DT * dp[i];
+    [T, Tn] = [Tn, T];
+    time += DT;
+  }
+
+  function pull() {
+    let deepest = 0;
+    for (let y = H - 1; y >= 0 && !deepest; y--)
+      for (let x = 0; x < W; x++) if (p[y * W + x] > 0.5) { deepest = y; break; }
+    if (deepest > H * 0.72) {
+      p.copyWithin(0, SHIFT * W); T.copyWithin(0, SHIFT * W);
+      p.fill(0, N - SHIFT * W); T.fill(0, N - SHIFT * W);
+    }
+  }
+
+  function draw() {
+    const d = img.data;
+    for (let i = 0, j = 0; i < N; i++, j += 4) {
+      const ph = Math.min(1, Math.max(0, p[i])), t = Math.min(1, Math.max(0, T[i]));
+      const o = 4 * ph * (1 - ph), edge = o * o * o;              // peaks on the crystal–melt interface
+      const v = 255 - 30 * t * (1 - ph) - 22 * ph - 215 * edge;  // outline + light crystal tint + faint latent-heat halo
+      d[j] = d[j + 1] = d[j + 2] = v; d[j + 3] = 255;
+    }
+    g.putImageData(img, 0, 0);
+    tval.textContent = `t = ${time.toFixed(3)}`;
+  }
+
+  cv.onclick = () => { reset(); draw(); };
+  reset();
+  if (reduced) { for (let k = 0; k < 2500; k++) step(); draw(); return; }
+  (function loop() {
+    if (!document.hidden) { for (let k = 0; k < STEPS; k++) step(); pull(); draw(); }
+    requestAnimationFrame(loop);
+  })();
+})();
+</script>
+</body>
+</html>

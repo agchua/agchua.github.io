@@ -1,0 +1,359 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Aaron Gabriel Chua</title>
+<style>
+  :root { --ink:#111; --mute:#8a8a8a; --line:#d4d4d4; }
+  * { box-sizing: border-box; }
+  html, body { height:100%; overflow:hidden; }          /* nothing scrolls: crystals, box and caption all stay put */
+  body { margin:0; background:#fff; color:var(--ink);
+         font:14px/1.5 ui-monospace, SFMono-Regular, Menlo, Monaco, "Cascadia Mono", Consolas, monospace; }
+  #bg { position:fixed; left:0; top:0; width:100vw; height:100vh; height:100lvh; z-index:0;
+        cursor:crosshair; touch-action:manipulation; }
+
+  /* resume box: fixed in the middle of the window; scrolls inside itself only if the window is too short */
+  main { position:fixed; z-index:1; left:50%; top:50%; transform:translate(-50%, -50%);
+         width:min(620px, calc(100vw - 32px)); max-height:calc(100vh - 88px); max-height:calc(100dvh - 88px); overflow:auto;
+         padding:26px 34px; background:#fff; border:1px solid var(--line); }
+  .head { display:flex; justify-content:space-between; align-items:baseline; gap:12px; flex-wrap:wrap; margin:0 0 10px; }
+  h1 { font-size:14px; font-weight:700; margin:0; }
+  hr { border:0; border-top:1px solid var(--line); margin:0 0 12px; }
+  p { margin:0 0 8px; }
+  main > :last-child { margin-bottom:0; }
+  ul { margin:0 0 12px; padding-left:22px; }
+  li { margin:1px 0; }
+  a { color:var(--ink); }
+  .dim { color:var(--mute); }
+  .intro { margin-bottom:14px; }
+
+  .cap { position:fixed; left:16px; bottom:12px; z-index:0; font:inherit; font-size:11px; color:var(--mute);
+         background:#fff; padding:2px 6px; pointer-events:none; max-width:calc(100vw - 32px); }
+
+  /* phones: normal scrolling page, crystals visible above and below the box, caption sits under the box */
+  @media (max-width: 680px) {
+    html, body { height:auto; overflow:auto; }
+    main { position:relative; left:auto; top:auto; transform:none; width:auto; max-height:none; overflow:visible;
+           margin:34vh 16px 0; padding:20px 18px; }        /* tall band of crystals above the box on load */
+    .cap { position:relative; left:auto; bottom:auto; z-index:1; display:block; width:fit-content;
+           margin:8px 16px 160px; }
+  }
+</style>
+</head>
+<body>
+<canvas id="bg" aria-label="click to nucleate a silicon grain"></canvas>
+
+<main>
+  <div class="head">
+    <h1>Aaron Gabriel Chua</h1>
+    <span class="links"><a href="https://www.linkedin.com/in/aaron-gabriel-chua/" target="_blank" rel="noopener">LinkedIn</a> / <a href="aaron_chua_resume.pdf" target="_blank" rel="noopener">Resume</a> / <a id="mail" href="#">Email</a></span>
+  </div>
+  <hr>
+  <p class="intro">Hi! I'm Aaron. I study materials science and OIDD at Penn M&amp;T. I'm interested in building and financing energy infrastructure for emerging markets, as well as tinkering with accessibility tech. In my free time, you can catch me collecting and restoring vintage fountain pens, developing my own film photos, and playing poker.</p>
+
+  <p>Experience:</p>
+  <ul>
+    <li><b><a href="https://mymana.xyz" target="_blank" rel="noopener" style="text-decoration:none">Mana</a>:</b> GTM Lead, Outsourcing &amp; Remote Work</li>
+    <li><b>Solid State Multi-Products:</b> Commodities Analyst</li>
+  </ul>
+
+  <p>Projects:</p>
+  <ul>
+    <li><a href="https://www.youtube.com/watch?v=yv9tC1JT24M" target="_blank" rel="noopener">Isaac</a> — haptic navigation for visually impaired seniors. Amazon Physical AI Award finalist at HackPrinceton. <a class="dim" href="https://devpost.com/software/nudge-hmbc0l" target="_blank" rel="noopener">devpost</a></li>
+    <li><a href="https://youtu.be/8L8Ehz5CbzQ" target="_blank" rel="noopener">Look</a> — eye-controlled robotic arm for people with quadriplegia. Won HackHarvard 2026. <a class="dim" href="https://devpost.com/software/look-8fignj" target="_blank" rel="noopener">devpost</a></li>
+    <li><a href="https://teamagilas.com" target="_blank" rel="noopener">Team Agilas</a> — F1 in Schools car; first Philippine team at the World Finals. Featured by Aston Martin and Aramco.</li>
+  </ul>
+
+</main>
+
+<div class="cap">fig. 1: phase-field (Kobayashi) model of Si dendrites solidifying from an undercooled melt · click to nucleate</div>
+
+<script>
+// email link is assembled at runtime so the address never appears in the HTML for scrapers
+document.getElementById('mail').href = 'mailto:' + ['agchua', 'wharton.upenn.edu'].join('@');
+
+/*
+  Silicon grains crystallising from an undercooled melt — Kobayashi (1993) phase-field model.
+    τ ∂p/∂t = ∇·(ε²∇p) − ∂x(εε′∂y p) + ∂y(εε′∂x p) + p(1−p)(p − ½ + m(T)) + noise
+    ∂T/∂t   = ∇²T + K ∂p/∂t
+  · 6-fold anisotropy: diamond-cubic Si viewed down ⟨111⟩ projects to a hexagonal pattern
+  · each grain has a random lattice orientation and grows by itself in its own melt layer, so a new
+    grain grows *over* older ones instead of stopping at them
+  · while growing, a grain is simulated on its own grid; when its tips near the grid edge it is
+    finished and painted permanently into the background, where newer grains cover it. Grains that end
+    up completely covered are simply gone — nothing is stored per finished grain, and nothing remelts.
+  Performance:
+  · only a window around each grain (its extent + a margin of melt) is simulated; the window only grows
+  · fast arctangent and a xorshift random generator in the inner loop
+  · growing grains are drawn cropped to their extent at screen resolution (with a pixel budget) every
+    other frame; the final full-resolution render is spread over several frames
+  · after the first minute, new grains start less often
+*/
+(function crystals() {
+  const cv = document.getElementById('bg'), g = cv.getContext('2d');
+  const box = document.querySelector('main');
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // phones / low-core devices get a lighter simulation (smaller grid, fewer grains growing at once)
+  const isSmall = () => matchMedia('(max-width: 680px)').matches || matchMedia('(pointer: coarse)').matches;
+  const SMALL = isSmall() || (navigator.hardwareConcurrency || 8) <= 4;
+  const NG = SMALL ? 128 : 176, NN = NG * NG;
+  const DX = 0.03, DT = 1e-4, TAU = 3e-4, EB = 0.01, DELTA = 0.04, K = 1.6;
+  const ALPHA = 0.9, GAMMA = 10, TEQ = 1, NOISE = 0.03;
+  const STEPS = 3, MAX_ACTIVE = 3, RING = 0.02, EDGE_STOP = 5, MARGIN = 14;
+  const SEED_MS = 3000, SEED_LATE_MS = 7000, SLOW_AFTER_MS = 60000, BAKE_FRAMES = 6;
+  const BLUE = [72, 112, 190], FILL = [250, 251, 253];
+  const i2dx = 1 / (2 * DX), idx2 = 1 / (DX * DX), AK = ALPHA / Math.PI, HALF_PI = Math.PI / 2;
+  const ax = new Float32Array(NN), ay = new Float32Array(NN), e2 = new Float32Array(NN), dp = new Float32Array(NN);
+
+  let rs = (Math.random() * 4294967295) >>> 0 || 1;                       // xorshift32
+  const rnd = () => { rs ^= rs << 13; rs ^= rs >>> 17; rs ^= rs << 5; return (rs >>> 0) / 4294967296; };
+
+  let dpr = 1, VW = 0, VH = 0;
+  const base = document.createElement('canvas'), bg = base.getContext('2d');   // finished grains live here
+  const active = [];
+
+  /* ---------- one grain ---------- */
+  function makeGrain(cx, cy) {
+    const th = Math.random() * Math.PI / 3, m = NG >> 1;
+    const c = {
+      cx, cy, S: 2.0 + Math.random() * (SMALL ? 1.0 : 0.9), // css px per grid cell → ~350–510 px (phones ~260–380 px)
+      p: new Float32Array(NN), T: new Float32Array(NN), Tn: new Float32Array(NN), at: new Float32Array(NN).fill(-1),
+      time: 0, co: Math.cos(6 * th), so: Math.sin(6 * th),
+      sprite: document.createElement('canvas'), bw: 0, bake: null,
+      // extent of the grain (p > 0.02), of its solid (p > 0.5), and the simulated window
+      ex0: m - 3, ex1: m + 3, ey0: m - 3, ey1: m + 3,
+      sx0: m - 3, sx1: m + 3, sy0: m - 3, sy1: m + 3,
+      wx0: Math.max(1, m - 3 - MARGIN), wx1: Math.min(NG - 2, m + 3 + MARGIN),
+      wy0: Math.max(1, m - 3 - MARGIN), wy1: Math.min(NG - 2, m + 3 + MARGIN)
+    };
+    for (let y = m - 3; y <= m + 3; y++) for (let x = m - 3; x <= m + 3; x++)
+      if ((x - m) ** 2 + (y - m) ** 2 <= 9) { c.p[y * NG + x] = 1; c.at[y * NG + x] = 0; }
+    return c;
+  }
+
+  function step(c) {
+    const p = c.p, T = c.T, Tn = c.Tn, at = c.at, co = c.co, so = c.so;
+    const X0 = c.wx0, X1 = c.wx1, Y0 = c.wy0, Y1 = c.wy1;
+    // pass 1: anisotropy terms (one cell wider than the window so pass 2 can read its neighbours)
+    for (let y = Y0 - 1; y <= Y1 + 1; y++) {
+      const row = y * NG, yu = (y ? y - 1 : 0) * NG, yd = (y < NG - 1 ? y + 1 : y) * NG;
+      for (let x = X0 - 1; x <= X1 + 1; x++) {
+        const i = row + x;
+        const gx = (p[i + 1] - p[i - 1]) * i2dx, gy = (p[yd + x] - p[yu + x]) * i2dx;
+        const r2 = gx * gx + gy * gy;
+        if (r2 < 1e-10) { ax[i] = 0; ay[i] = 0; e2[i] = EB * EB; continue; }
+        const ar = gx * gx - gy * gy, ai = 2 * gx * gy, br = ar * gx - ai * gy, bi = ar * gy + ai * gx;
+        const r6 = r2 * r2 * r2, cc = (br * br - bi * bi) / r6, ss = (2 * br * bi) / r6;
+        const c6 = cc * co + ss * so, s6 = ss * co - cc * so;                   // rotate by this grain's θ₀
+        const eps = EB * (1 + DELTA * c6), epsd = -EB * 6 * DELTA * s6;
+        ax[i] = eps * epsd * gx; ay[i] = -eps * epsd * gy; e2[i] = eps * eps;
+      }
+    }
+    // pass 2: dp/dt and the new temperature
+    for (let y = Y0; y <= Y1; y++) {
+      const row = y * NG;
+      for (let x = X0; x <= X1; x++) {
+        const i = row + x, pi = p[i], ti = T[i];
+        const lapP = (p[i - 1] + p[i + 1] + p[i - NG] + p[i + NG] - 4 * pi) * idx2;
+        const lapT = (T[i - 1] + T[i + 1] + T[i - NG] + T[i + NG] - 4 * ti) * idx2;
+        const z = GAMMA * (TEQ - ti), az = z < 0 ? -z : z;                       // fast atan(z)
+        const at_ = az <= 1 ? az / (1 + 0.28 * az * az) : HALF_PI - az / (az * az + 0.28);
+        const m = AK * (z < 0 ? -at_ : at_);
+        const reac = pi * (1 - pi) * (pi - 0.5 + m + NOISE * (rnd() - 0.5));
+        const v = ((ay[i + 1] - ay[i - 1]) * i2dx + (ax[i + NG] - ax[i - NG]) * i2dx + e2[i] * lapP + reac) / TAU;
+        dp[i] = v;
+        Tn[i] = ti + DT * lapT + K * DT * v;
+      }
+    }
+    // pass 3: apply, record freeze time, track extents
+    c.time += DT;
+    let ex0 = NG, ex1 = -1, ey0 = NG, ey1 = -1, sx0 = NG, sx1 = -1, sy0 = NG, sy1 = -1;
+    for (let y = Y0; y <= Y1; y++) {
+      const row = y * NG;
+      for (let x = X0; x <= X1; x++) {
+        const i = row + x, v = p[i] + DT * dp[i];
+        p[i] = v;
+        if (v > 0.02) {
+          if (x < ex0) ex0 = x; if (x > ex1) ex1 = x; if (y < ey0) ey0 = y; if (y > ey1) ey1 = y;
+          if (v > 0.5) {
+            if (at[i] < 0) at[i] = c.time;
+            if (x < sx0) sx0 = x; if (x > sx1) sx1 = x; if (y < sy0) sy0 = y; if (y > sy1) sy1 = y;
+          }
+        }
+      }
+    }
+    c.T = Tn; c.Tn = T;
+    if (ex1 >= 0) {
+      c.ex0 = ex0; c.ex1 = ex1; c.ey0 = ey0; c.ey1 = ey1; c.sx0 = sx0; c.sx1 = sx1; c.sy0 = sy0; c.sy1 = sy1;
+      c.wx0 = Math.max(1, Math.min(c.wx0, ex0 - MARGIN)); c.wx1 = Math.min(NG - 2, Math.max(c.wx1, ex1 + MARGIN));
+      c.wy0 = Math.max(1, Math.min(c.wy0, ey0 - MARGIN)); c.wy1 = Math.min(NG - 2, Math.max(c.wy1, ey1 + MARGIN));
+    }
+  }
+
+  // finished once any solid comes within EDGE_STOP cells of its grid edge (so nothing is ever clipped)
+  const reachedEdge = c => c.sx0 <= EDGE_STOP || c.sy0 <= EDGE_STOP || c.sx1 >= NG - 1 - EDGE_STOP || c.sy1 >= NG - 1 - EDGE_STOP;
+
+  /* ---------- rendering ----------
+     A "job" draws the grain's current extent at a given resolution into an ImageData. Growing grains
+     use a shared buffer and a pixel budget; the final bake gets its own buffer at full resolution and
+     is filled a few rows per frame. */
+  const BUDGET = SMALL ? 140000 : 320000;
+  let buf = new Uint8ClampedArray(4 * BUDGET);
+
+  function makeJob(c, budget, own) {
+    const x0 = Math.max(0, c.ex0 - 2), y0 = Math.max(0, c.ey0 - 2), x1 = Math.min(NG - 1, c.ex1 + 2), y1 = Math.min(NG - 1, c.ey1 + 2);
+    const bw = x1 - x0 + 1, bh = y1 - y0 + 1;
+    const scale = Math.min(c.S * dpr, Math.sqrt(budget / (bw * bh)));           // sprite px per grid cell
+    const w = Math.max(1, Math.round(bw * scale)), h = Math.max(1, Math.round(bh * scale));
+    let img;
+    if (own) img = new ImageData(w, h);
+    else {
+      if (buf.length < w * h * 4) buf = new Uint8ClampedArray(w * h * 4);
+      img = new ImageData(new Uint8ClampedArray(buf.buffer, 0, w * h * 4), w, h);
+    }
+    const ia = new Int32Array(w), ib = new Int32Array(w), fx = new Float32Array(w);
+    const ja = new Int32Array(h), jb = new Int32Array(h), fy = new Float32Array(h);
+    for (let i = 0; i < w; i++) {
+      const s = x0 + (i + 0.5) * bw / w - 0.5, a = Math.floor(s);
+      ia[i] = Math.min(NG - 1, Math.max(0, a)); ib[i] = Math.min(NG - 1, Math.max(0, a + 1)); fx[i] = Math.min(1, Math.max(0, s - a));
+    }
+    for (let j = 0; j < h; j++) {
+      const s = y0 + (j + 0.5) * bh / h - 0.5, a = Math.floor(s);
+      ja[j] = Math.min(NG - 1, Math.max(0, a)) * NG; jb[j] = Math.min(NG - 1, Math.max(0, a + 1)) * NG; fy[j] = Math.min(1, Math.max(0, s - a));
+    }
+    return { x0, y0, bw, bh, w, h, img, ia, ib, fx, ja, jb, fy, row: 0 };
+  }
+
+  function renderRows(c, job, j0, j1) {
+    const p = c.p, at = c.at, d = job.img.data, w = job.w, ia = job.ia, ib = job.ib, fx = job.fx;
+    let k = j0 * w * 4;
+    for (let j = j0; j < j1; j++) {
+      const ra = job.ja[j], rb = job.jb[j], wy = job.fy[j];
+      for (let i = 0; i < w; i++, k += 4) {
+        const a = ia[i], b = ib[i], wx = fx[i];
+        const pt = p[ra + a] + (p[ra + b] - p[ra + a]) * wx, pb = p[rb + a] + (p[rb + b] - p[rb + a]) * wx;
+        const ph = Math.min(1, Math.max(0, pt + (pb - pt) * wy));
+        if (ph < 0.02) { d[k + 3] = 0; continue; }
+        const o = 4 * ph * (1 - ph), o2 = o * o, o4 = o2 * o2, edge = o4 * o4;  // thin crystal outline
+        let ring = 0;
+        if (ph > 0.6 && at[ra + a] >= 0 && at[ra + b] >= 0 && at[rb + a] >= 0 && at[rb + b] >= 0) {
+          const tt = at[ra + a] + (at[ra + b] - at[ra + a]) * wx, tb = at[rb + a] + (at[rb + b] - at[rb + a]) * wx;
+          const tv = tt + (tb - tt) * wy;
+          if (tv > RING * 0.5) {                                                 // skip the seed itself
+            const f = (tv / RING) % 1, dd = Math.min(f, 1 - f);
+            ring = Math.exp(-(dd * dd) / 0.0018);                               // faint growth-ring texture
+          }
+        }
+        const mix = Math.min(1, 0.6 * edge + 0.16 * ring);
+        d[k]     = FILL[0] + (BLUE[0] - FILL[0]) * mix;
+        d[k + 1] = FILL[1] + (BLUE[1] - FILL[1]) * mix;
+        d[k + 2] = FILL[2] + (BLUE[2] - FILL[2]) * mix;
+        d[k + 3] = 255 * Math.min(1, Math.max(edge, ph * 2));                   // opaque inside → covers older grains
+      }
+    }
+  }
+
+  function renderLive(c) {
+    const job = makeJob(c, BUDGET, false);
+    renderRows(c, job, 0, job.h);
+    if (c.sprite.width !== job.w || c.sprite.height !== job.h) { c.sprite.width = job.w; c.sprite.height = job.h; c.sctx = null; }
+    (c.sctx || (c.sctx = c.sprite.getContext('2d'))).putImageData(job.img, 0, 0);
+    c.bx = job.x0; c.by = job.y0; c.bw = job.bw; c.bh = job.bh;
+  }
+  function startBake(c) {
+    const job = makeJob(c, Infinity, true);
+    job.canvas = document.createElement('canvas'); job.canvas.width = job.w; job.canvas.height = job.h;
+    job.ctx = job.canvas.getContext('2d');
+    job.per = Math.ceil(job.h / BAKE_FRAMES);
+    c.bake = job;
+  }
+  function continueBake(c) {                                    // returns true once the bake is complete
+    const job = c.bake, j1 = Math.min(job.h, job.row + job.per);
+    renderRows(c, job, job.row, j1);
+    job.ctx.putImageData(job.img, 0, 0, 0, job.row, job.w, j1 - job.row);
+    job.row = j1;
+    return j1 >= job.h;
+  }
+  function draw(ctx, c, src, x0, y0, bw, bh) {
+    if (!bw) return;
+    const left = c.cx - NG * c.S / 2 + x0 * c.S, top = c.cy - NG * c.S / 2 + y0 * c.S;
+    ctx.drawImage(src, left * dpr, top * dpr, bw * c.S * dpr, bh * c.S * dpr);
+  }
+  const drawLive = (ctx, c) => draw(ctx, c, c.sprite, c.bx, c.by, c.bw, c.bh);
+  const drawBake = (ctx, c) => draw(ctx, c, c.bake.canvas, c.bake.x0, c.bake.y0, c.bake.bw, c.bake.bh);
+
+  /* ---------- nucleation ---------- */
+  function nucleate(x, y) { if (active.length < MAX_ACTIVE) active.push(makeGrain(x, y)); }
+  function randomSpot() {
+    const b = box.getBoundingClientRect();
+    for (let tries = 0; tries < 40; tries++) {
+      const x = Math.random() * VW, y = Math.random() * VH;
+      if (x < b.left - 20 || x > b.right + 20 || y < b.top - 20 || y > b.bottom + 20) return [x, y];
+    }
+    return [Math.random() * VW, Math.random() * VH];          // box fills the screen (phones): anywhere
+  }
+
+  function resize() {
+    // keep finished grains when the window changes size (e.g. a phone's address bar showing / hiding)
+    const old = document.createElement('canvas');
+    old.width = base.width; old.height = base.height;
+    if (old.width && old.height) old.getContext('2d').drawImage(base, 0, 0);
+    dpr = Math.min(devicePixelRatio || 1, SMALL || isSmall() ? 1.5 : 2); VW = cv.clientWidth || innerWidth; VH = cv.clientHeight || innerHeight;
+    cv.width = base.width = Math.round(VW * dpr); cv.height = base.height = Math.round(VH * dpr);
+    bg.fillStyle = '#fff'; bg.fillRect(0, 0, base.width, base.height);
+    if (old.width && old.height) bg.drawImage(old, 0, 0);
+  }
+
+  let tick = 0;
+  function frame() {
+    tick++;
+    for (let n = active.length - 1; n >= 0; n--) {
+      const c = active[n];
+      if (c.bake) {                                           // finishing: a few rows of the full-res render per frame
+        if (continueBake(c)) { drawBake(bg, c); active.splice(n, 1); }
+        continue;
+      }
+      for (let k = 0; k < STEPS; k++) step(c);
+      if (reachedEdge(c) || c.time > 1.2) startBake(c);
+      else if (!c.bw || (tick + n) % 2 === 0) renderLive(c); // redraw each grain every other frame
+    }
+    g.drawImage(base, 0, 0);
+    for (const c of active) drawLive(g, c);                   // growing grains sit on top, oldest first
+  }
+
+  cv.addEventListener('pointerdown', e => { nucleate(e.clientX, e.clientY); });
+  let rt; addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(resize, 150); });
+  resize();
+
+  if (reduced) {                                              // still image: grow a handful to completion
+    for (let s = 0; s < 6; s++) {
+      const c = makeGrain(...randomSpot());
+      while (!reachedEdge(c) && c.time < 1.2) step(c);
+      startBake(c); while (!continueBake(c)); drawBake(bg, c);
+    }
+    g.drawImage(base, 0, 0);
+    return;
+  }
+
+  // first grains: on phones, spread them across the band above the box so the top fills in right away
+  const top0 = box.getBoundingClientRect().top;
+  for (let s = 0; s < 3; s++) {
+    if (SMALL || isSmall()) nucleate((s + 0.3 + 0.4 * Math.random()) * VW / 3, Math.random() * Math.max(40, top0 - 30));
+    else nucleate(...randomSpot());
+  }
+  const t0 = performance.now();
+  let last = t0;
+  (function loop(now) {
+    if (!document.hidden) {
+      const every = now - t0 > SLOW_AFTER_MS ? SEED_LATE_MS : SEED_MS;   // calmer once the page has settled
+      if (now - last > every) { nucleate(...randomSpot()); last = now; }
+      frame();
+    } else last = now;
+    requestAnimationFrame(loop);
+  })(last);
+})();
+</script>
+</body>
+</html>

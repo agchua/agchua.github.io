@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Wireframe E · Micrograph</title>
+<style>
+  :root { --ink:#111; --mute:#8a8a8a; --line:#d4d4d4; --ph:#ececec; --note:#2f6fdf; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:#fff; color:var(--ink);
+         font:14px/1.65 ui-monospace, SFMono-Regular, Menlo, Monaco, "Cascadia Mono", Consolas, monospace; }
+  main { max-width:620px; margin:56px auto 96px; padding:0 16px; }
+  h1 { font-size:14px; font-weight:700; margin:0 0 12px; }
+  p { margin:0 0 14px; }
+  ul { margin:0 0 18px; padding-left:22px; }
+  li { margin:2px 0; }
+  a { color:var(--ink); }
+  .ph { background:var(--ph); color:#555; padding:0 3px; }
+
+  .fig { margin:0 0 22px; }
+  .plate { position:relative; }
+  #ch { display:block; width:100%; aspect-ratio:3 / 1; cursor:pointer; image-rendering:auto; }
+  .scale { position:absolute; right:8px; bottom:8px; background:#fff; padding:2px 6px; font-size:10px;
+           display:flex; align-items:center; gap:6px; }
+  .scale i { display:block; width:48px; height:3px; background:var(--ink); }
+  .cap { display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; font-size:11px; color:var(--mute); margin-top:6px; }
+  #tval { font-variant-numeric:tabular-nums; }
+
+  .note { color:var(--note); font-size:11px; }
+  .note.block { display:block; margin:-8px 0 14px; }
+  .tag { position:fixed; top:12px; left:16px; }
+  #toggle { position:fixed; right:16px; bottom:16px; font:inherit; font-size:11px; background:#fff;
+            border:1px solid var(--note); color:var(--note); padding:4px 8px; cursor:pointer; }
+  body.hide-notes .note { display:none; }
+</style>
+</head>
+<body>
+<span class="note tag">WIREFRAME E — “micrograph” (comp. materials science)</span>
+
+<main>
+  <h1><span class="ph">Your Name</span></h1>
+
+  <figure class="fig">
+    <div class="plate">
+      <canvas id="ch" title="click to re-quench"></canvas>
+      <div class="scale"><i></i><span>50 nm</span></div>
+    </div>
+    <figcaption class="cap"><span id="clabel">fig. 1 — spinodal decomposition, 50/50 alloy (Cahn–Hilliard)</span><span id="tval"></span></figcaption>
+  </figure>
+  <span class="note block">↑ live Cahn–Hilliard simulation of an alloy un-mixing. Click to re-quench (50/50 ↔ 70/30).</span>
+
+  <p><span class="ph">one-line bio — school / what you're doing now / where you live.</span></p>
+
+  <p>Experience:</p>
+  <ul>
+    <li><b><span class="ph">Company / Lab</span>:</b> <span class="ph">Role</span> – <span class="ph">City</span></li>
+    <li><b><span class="ph">Company / Lab</span>:</b> <span class="ph">Role</span> – <span class="ph">City</span></li>
+    <li><b><span class="ph">Company / Lab</span>:</b> <span class="ph">Role</span> – <span class="ph">City</span></li>
+  </ul>
+
+  <p>Research:</p>
+  <ul>
+    <li><a href="#"><span class="ph">paper / project title</span></a> — <span class="ph">venue or one line</span></li>
+    <li><a href="#"><span class="ph">paper / project title</span></a> — <span class="ph">venue or one line</span></li>
+  </ul>
+  <span class="note block">↑ “Projects” renamed “Research” for papers, posters, codes</span>
+
+  <p>Contact:</p>
+  <p><a href="#">LinkedIn</a> / <a href="#">GitHub</a> / <a href="#">Scholar</a> / <span class="ph">you[at]domain[dot]com</span></p>
+</main>
+
+<button id="toggle">hide notes</button>
+
+<script>
+document.getElementById('toggle').onclick = e => {
+  const off = document.body.classList.toggle('hide-notes');
+  e.target.textContent = off ? 'show notes' : 'hide notes';
+};
+
+(function cahnHilliard() {
+  const cv = document.getElementById('ch'), g = cv.getContext('2d');
+  const tval = document.getElementById('tval'), label = document.getElementById('clabel');
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const NX = 240, NY = 80, GAMMA = 1.5, DT = 0.012, PER_FRAME = 24, RESET_AT = 9000;
+  const MIXES = [[0, '50/50 alloy'], [0.4, '70/30 alloy']];
+  cv.width = NX; cv.height = NY;
+  const img = g.createImageData(NX, NY);
+  let c = new Float32Array(NX * NY), mu = new Float32Array(NX * NY), next = new Float32Array(NX * NY);
+  let mix = 0, steps = 0;
+
+  const idx = (x, y) => ((y + NY) % NY) * NX + ((x + NX) % NX);
+  function lap(f, x, y) {
+    return f[idx(x + 1, y)] + f[idx(x - 1, y)] + f[idx(x, y + 1)] + f[idx(x, y - 1)] - 4 * f[y * NX + x];
+  }
+  function quench() {
+    const c0 = MIXES[mix][0];
+    for (let i = 0; i < c.length; i++) c[i] = c0 + (Math.random() - 0.5) * 0.1;
+    steps = 0;
+    label.textContent = `fig. 1 — spinodal decomposition, ${MIXES[mix][1]} (Cahn–Hilliard)`;
+  }
+  function step() {
+    for (let y = 0; y < NY; y++) for (let x = 0; x < NX; x++) {
+      const v = c[y * NX + x];
+      mu[y * NX + x] = v * v * v - v - GAMMA * lap(c, x, y);
+    }
+    for (let y = 0; y < NY; y++) for (let x = 0; x < NX; x++)
+      next[y * NX + x] = c[y * NX + x] + DT * lap(mu, x, y);
+    [c, next] = [next, c];
+    steps++;
+  }
+  function draw() {
+    const d = img.data;
+    for (let i = 0, j = 0; i < c.length; i++, j += 4) {
+      const v = 0.5 + 0.5 * Math.tanh(2.5 * c[i]);           // phase A → light, phase B → dark
+      const grey = 236 - v * 206;
+      d[j] = d[j + 1] = d[j + 2] = grey; d[j + 3] = 255;
+    }
+    g.putImageData(img, 0, 0);
+    tval.textContent = `t = ${(steps * DT).toFixed(1)}`;
+  }
+
+  cv.onclick = () => { mix = (mix + 1) % MIXES.length; quench(); for (let i = 0; i < 300; i++) step(); draw(); };
+  quench();
+  for (let i = 0; i < 400; i++) step();      // skip the featureless noise at the very start
+  draw();
+  if (reduced) { for (let i = 0; i < 2500; i++) step(); draw(); return; }
+
+  (function loop() {
+    if (!document.hidden) {
+      for (let i = 0; i < PER_FRAME; i++) step();
+      if (steps > RESET_AT) { quench(); for (let i = 0; i < 300; i++) step(); }
+      draw();
+    }
+    requestAnimationFrame(loop);
+  })();
+})();
+</script>
+</body>
+</html>
