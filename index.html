@@ -4,8 +4,21 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Aaron Gabriel Chua</title>
+<meta name="description" content="Aaron Gabriel Chua: materials science and OIDD at Penn M&amp;T. Energy infrastructure for emerging markets and accessibility tech.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://agchua.github.io/">
+<meta property="og:title" content="Aaron Gabriel Chua">
+<meta property="og:description" content="Materials science and OIDD at Penn M&amp;T. Energy infrastructure for emerging markets and accessibility tech.">
+<meta property="og:image" content="https://agchua.github.io/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Aaron Gabriel Chua, surrounded by simulated silicon crystals">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="icon" href="favicon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
 <style>
-  :root { --ink:#111; --mute:#8a8a8a; --line:#d4d4d4; }
+  :root { --ink:#111; --mute:#6b6b6b; --line:#d4d4d4; }   /* --mute is 5.3:1 on white (WCAG AA) */
   * { box-sizing: border-box; }
   html, body { height:100%; overflow:hidden; }          /* nothing scrolls: crystals, box and caption all stay put */
   body { margin:0; background:#fff; color:var(--ink);
@@ -19,23 +32,25 @@
          padding:26px 34px; background:#fff; border:1px solid var(--line); }
   .head { display:flex; justify-content:space-between; align-items:baseline; gap:12px; flex-wrap:wrap; margin:0 0 10px; }
   h1 { font-size:14px; font-weight:700; margin:0; }
+  h2 { font:inherit; margin:0 0 8px; }                 /* section headings, styled like body text */
   hr { border:0; border-top:1px solid var(--line); margin:0 0 12px; }
   p { margin:0 0 8px; }
   main > :last-child { margin-bottom:0; }
   ul { margin:0 0 12px; padding-left:22px; }
   li { margin:1px 0; }
   a { color:var(--ink); }
+  a:focus-visible { outline:2px solid #4870be; outline-offset:2px; border-radius:1px; }
   .dim { color:var(--mute); }
   .intro { margin-bottom:14px; }
 
-  .cap { position:fixed; left:16px; bottom:12px; z-index:0; font:inherit; font-size:11px; color:var(--mute);
+  .cap { position:fixed; left:16px; bottom:12px; z-index:0; font:inherit; font-size:12px; color:var(--mute);
          background:#fff; padding:2px 6px; pointer-events:none; max-width:calc(100vw - 32px); }
 
   /* phones: normal scrolling page, crystals visible above and below the box, caption sits under the box */
   @media (max-width: 680px) {
     html, body { height:auto; overflow:auto; }
     main { position:relative; left:auto; top:auto; transform:none; width:auto; max-height:none; overflow:visible;
-           margin:34vh 16px 0; padding:20px 18px; }        /* tall band of crystals above the box on load */
+           margin:22vh 16px 0; padding:20px 18px; }        /* band of crystals above the box on load */
     .cap { position:relative; left:auto; bottom:auto; z-index:1; display:block; width:fit-content;
            margin:8px 16px 160px; }
   }
@@ -47,23 +62,23 @@
 <main>
   <div class="head">
     <h1>Aaron Gabriel Chua</h1>
-    <span class="links"><a href="https://www.linkedin.com/in/aaron-gabriel-chua/" target="_blank" rel="noopener">LinkedIn</a> / <a href="aaron_chua_resume.pdf" target="_blank" rel="noopener">Resume</a> / <a id="mail" href="#">Email</a></span>
+    <span class="links"><a href="https://www.linkedin.com/in/aaron-gabriel-chua/" target="_blank" rel="noopener">LinkedIn</a> / <a href="aaron_chua_resume.pdf" target="_blank" rel="noopener">Resume</a> / <a href="https://github.com/agchua" target="_blank" rel="noopener">GitHub</a> / <a id="mail" href="#">Email</a></span>
   </div>
   <hr>
   <p class="intro">Hi! I'm Aaron. I study materials science and OIDD at Penn M&amp;T. I'm interested in building and financing energy infrastructure for emerging markets, as well as tinkering with accessibility tech. In my free time, you can catch me collecting and restoring vintage fountain pens, developing my own film photos, and playing poker.</p>
 
-  <p>Experience:</p>
+  <h2>Experience:</h2>
   <ul>
     <li><b><a href="https://mymana.xyz" target="_blank" rel="noopener" style="text-decoration:none">Mana</a>:</b> GTM Lead, Outsourcing &amp; Remote Work</li>
     <li><b>Solid State Multi-Products:</b> Commodities Analyst</li>
     <li><b>Penn Electric Racing:</b> Mechanical Team, driverless braking &amp; steering</li>
   </ul>
 
-  <p>Projects:</p>
+  <h2>Projects:</h2>
   <ul>
-    <li><a href="https://www.youtube.com/watch?v=yv9tC1JT24M" target="_blank" rel="noopener">Isaac</a> — haptic navigation for visually impaired seniors. Amazon Physical AI Award finalist at HackPrinceton. <a class="dim" href="https://devpost.com/software/nudge-hmbc0l" target="_blank" rel="noopener">devpost</a></li>
-    <li><a href="https://youtu.be/8L8Ehz5CbzQ" target="_blank" rel="noopener">Look</a> — eye-controlled robotic arm for people with quadriplegia. Won HackHarvard 2026. <a class="dim" href="https://devpost.com/software/look-8fignj" target="_blank" rel="noopener">devpost</a></li>
-    <li><a href="https://teamagilas.com" target="_blank" rel="noopener">Team Agilas</a> — F1 in Schools car; first Philippine team at the World Finals. Featured by Aston Martin and Aramco.</li>
+    <li><a href="https://www.youtube.com/watch?v=yv9tC1JT24M" target="_blank" rel="noopener">Isaac</a> — haptic navigation for visually impaired seniors. Amazon Physical AI Award finalist at HackPrinceton. <a class="dim" href="https://devpost.com/software/nudge-hmbc0l" target="_blank" rel="noopener" aria-label="Isaac on Devpost">devpost</a></li>
+    <li><a href="https://youtu.be/8L8Ehz5CbzQ" target="_blank" rel="noopener">Look</a> — eye-controlled robotic arm for people with quadriplegia. Grand Prize Runner-Up, HackHarvard 2026. <a class="dim" href="https://devpost.com/software/look-8fignj" target="_blank" rel="noopener" aria-label="Look on Devpost">devpost</a></li>
+    <li><a href="https://teamagilas.com" target="_blank" rel="noopener">Team Agilas</a> — F1 in Schools; first Philippine team at the World Finals, Best Newcomer at the Qatar GP Finals (1 of 55 teams), $80K raised in sponsorship. Featured by Aston Martin and Aramco.</li>
   </ul>
 
 </main>
@@ -353,7 +368,7 @@ document.getElementById('mail').href = 'mailto:' + ['agchua', 'wharton.upenn.edu
     const old = document.createElement('canvas');
     old.width = base.width; old.height = base.height;
     if (old.width && old.height) old.getContext('2d').drawImage(base, 0, 0);
-    dpr = Math.min(devicePixelRatio || 1, SMALL || isSmall() ? 1.5 : 2); VW = cv.clientWidth || innerWidth; VH = cv.clientHeight || innerHeight;
+    dpr = Math.min(devicePixelRatio || 1, SMALL || isSmall() ? 1.5 : 2); VW = cv.clientWidth; VH = cv.clientHeight;   // 0 while hidden; the loop re-checks
     cv.width = base.width = Math.round(VW * dpr); cv.height = base.height = Math.round(VH * dpr);
     bg.fillStyle = '#fff'; bg.fillRect(0, 0, base.width, base.height);
     if (old.width && old.height) bg.drawImage(old, 0, 0);
@@ -361,6 +376,7 @@ document.getElementById('mail').href = 'mailto:' + ['agchua', 'wharton.upenn.edu
   }
 
   let tick = 0;
+  const WARM_FRAMES = 60;
   function frame() {
     tick++;
     for (let n = active.length - 1; n >= 0; n--) {
@@ -369,10 +385,11 @@ document.getElementById('mail').href = 'mailto:' + ['agchua', 'wharton.upenn.edu
         if (continueBake(c)) { drawBake(bg, c); markCovered(c, performance.now()); active.splice(n, 1); }
         continue;
       }
-      for (let k = 0; k < STEPS; k++) step(c);
+      for (let k = 0, n2 = tick < WARM_FRAMES ? STEPS * 3 : STEPS; k < n2; k++) step(c);   // faster for the first second
       if (reachedEdge(c) || c.time > 1.2) startBake(c);
       else if (!c.bw || (tick + n) % 2 === 0) renderLive(c); // redraw each grain every other frame
     }
+    if (!base.width || !base.height) return;                 // zero-size canvas (e.g. loaded in a hidden pane): nothing to draw
     g.drawImage(base, 0, 0);
     for (const c of active) drawLive(g, c);                   // growing grains sit on top, oldest first
   }
@@ -387,7 +404,7 @@ document.getElementById('mail').href = 'mailto:' + ['agchua', 'wharton.upenn.edu
       while (!reachedEdge(c) && c.time < 1.2) step(c);
       startBake(c); while (!continueBake(c)); drawBake(bg, c); markCovered(c, performance.now());
     }
-    g.drawImage(base, 0, 0);
+    if (base.width && base.height) g.drawImage(base, 0, 0);
     return;
   }
 
@@ -397,15 +414,21 @@ document.getElementById('mail').href = 'mailto:' + ['agchua', 'wharton.upenn.edu
     if (SMALL || isSmall()) nucleate((s + 0.3 + 0.4 * Math.random()) * VW / 3, Math.random() * Math.max(40, top0 - 30));
     else nucleate(...randomSpot());
   }
+  // no empty first screen: give the first grains a head start before the first paint
+  for (const c of active) { for (let k = 0; k < 700; k++) step(c); renderLive(c); }
   const t0 = performance.now();
   let last = t0;
   (function loop(now) {
-    if (!document.hidden) {
+    requestAnimationFrame(loop);                              // schedule first, so one bad frame can never stop the animation
+    if (document.hidden) { last = now; return; }
+    try {
+      // pick up size changes that arrive without a resize event (e.g. a pane that loaded hidden at 0×0)
+      if (cv.clientWidth !== VW || cv.clientHeight !== VH) resize();
+      if (!VW || !VH) return;
       const every = now - t0 > SLOW_AFTER_MS ? SEED_LATE_MS : SEED_MS;   // calmer once the page has settled
       if (now - last > every) { nucleate(...randomSpot()); last = now; }
       frame();
-    } else last = now;
-    requestAnimationFrame(loop);
+    } catch (err) { console.error(err); }
   })(last);
 })();
 </script>
